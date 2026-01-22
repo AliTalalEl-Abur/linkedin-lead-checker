@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: linkedin-lead-checker-api
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /health
+    
+    envVars:
+      # REQUIRED - Must be set in Render dashboard:
+      # - DATABASE_URL (from Render Postgres instance)
+      # - JWT_SECRET_KEY (generate: openssl rand -hex 32)
+      
+      # RECOMMENDED - Safe defaults:
+      - key: ENV
+        value: prod
+      
+      - key: OPENAI_ENABLED
+        value: "false"
+      
+      # OPTIONAL - Can be empty, won't break startup:
+      # - OPENAI_API_KEY (only if OPENAI_ENABLED=true)
+      # - STRIPE_API_KEY
+      # - STRIPE_WEBHOOK_SECRET
+      # - STRIPE_PRICE_PRO_ID
+      # - STRIPE_PRICE_TEAM_ID
+      # - CORS_ALLOW_ORIGINS
+
+# Database: Add Render PostgreSQL service separately in dashboard
+# Plan: Free (5GB included)
+
+# Cost guarantee:
+# - Web Service: Free (sleeps after 15 min inactivity)
+# - PostgreSQL: Free
+# - OpenAI: $0 (OPENAI_ENABLED=false by default)
+# Total: $0/month until Pro subscribers exist

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Processing - LinkedIn Lead Checker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: #333;
+    }
+    
+    .container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      padding: 40px;
+      max-width: 500px;
+      width: 90%;
+      text-align: center;
+    }
+    
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    h1 {
+      color: #667eea;
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+    
+    p {
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+    
+    .success {
+      color: #10b981;
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    
+    .error {
+      color: #ef4444;
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    
+    .btn {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 12px 30px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 20px;
+      transition: background 0.3s;
+    }
+    
+    .btn:hover {
+      background: #5568d3;
+    }
+    
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="hidden">
+      <div class="spinner"></div>
+      <h1>Processing Payment</h1>
+      <p>Please wait while we verify your payment...</p>
+    </div>
+    
+    <div id="success" class="hidden">
+      <div class="success">✓</div>
+      <h1>Payment Successful!</h1>
+      <p>Your account has been upgraded to Pro.</p>
+      <p>You now have <strong>500 profile analyses per week</strong>.</p>
+      <a href="dashboard.html" class="btn">Go to Dashboard</a>
+    </div>
+    
+    <div id="error" class="hidden">
+      <div class="error">✗</div>
+      <h1>Payment Failed</h1>
+      <p id="errorMessage">Something went wrong with your payment.</p>
+      <a href="dashboard.html" class="btn">Back to Dashboard</a>
+    </div>
+  </div>
+  
+  <script>
+    const API_BASE = 'http://127.0.0.1:8001';
+    
+    const elements = {
+      loading: document.getElementById('loading'),
+      success: document.getElementById('success'),
+      error: document.getElementById('error'),
+      errorMessage: document.getElementById('errorMessage'),
+    };
+    
+    async function checkPaymentStatus() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionId = urlParams.get('session_id');
+      
+      if (!sessionId) {
+        showError('No payment session found');
+        return;
+      }
+      
+      elements.loading.classList.remove('hidden');
+      
+      const token = localStorage.getItem('authToken');
+      
+      if (!token) {
+        showError('Not authenticated. Please login again.');
+        return;
+      }
+      
+      try {
+        // Wait a bit for webhook to process
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Fetch updated user data
+        const response = await fetch(`${API_BASE}/user`, {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to verify payment status');
+        }
+        
+        const userData = await response.json();
+        
+        if (userData.plan === 'pro') {
+          showSuccess();
+        } else {
+          // Payment might still be processing, check again
+          await new Promise(resolve => setTimeout(resolve, 3000));
+          
+          const retryResponse = await fetch(`${API_BASE}/user`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          
+          if (retryResponse.ok) {
+            const retryData = await retryResponse.json();
+            if (retryData.plan === 'pro') {
+              showSuccess();
+            } else {
+              showError('Payment is being processed. Please check your dashboard in a few minutes.');
+            }
+          } else {
+            showError('Could not verify payment status');
+          }
+        }
+      } catch (error) {
+        console.error('Payment verification error:', error);
+        showError(error.message);
+      }
+    }
+    
+    function showSuccess() {
+      elements.loading.classList.add('hidden');
+      elements.error.classList.add('hidden');
+      elements.success.classList.remove('hidden');
+    }
+    
+    function showError(message) {
+      elements.loading.classList.add('hidden');
+      elements.success.classList.add('hidden');
+      elements.errorMessage.textContent = message;
+      elements.error.classList.remove('hidden');
+    }
+    
+    // Start verification on load
+    checkPaymentStatus();
+  </script>
+</body>
+</html>

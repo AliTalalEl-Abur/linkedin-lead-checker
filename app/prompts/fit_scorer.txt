@@ -1,0 +1,41 @@
+You are evaluating how well a LinkedIn profile matches an Ideal Customer Profile (ICP).
+
+TASK: Analyze the profile and score the fit across multiple dimensions.
+
+INPUT:
+- LinkedIn profile data (JSON)
+- ICP configuration (JSON with criteria like: industry, seniority, company_size, location, skills, etc.)
+
+OUTPUT SCHEMA (strict JSON):
+{
+  "overall_score": <number 0-100>,
+  "dimension_scores": {
+    "seniority_match": <number 0-100>,
+    "industry_match": <number 0-100>,
+    "company_size_match": <number 0-100>,
+    "skills_match": <number 0-100>,
+    "experience_match": <number 0-100>,
+    "engagement_level": <number 0-100>
+  },
+  "positive_signals": [
+    "<specific signal from profile>"
+  ],
+  "negative_signals": [
+    "<specific concern from profile>"
+  ],
+  "data_quality": <number 0-100>,
+  "confidence": <number 0-100>
+}
+
+SCORING GUIDELINES:
+- overall_score: Weighted average considering all dimensions
+- seniority_match: How well job title/level matches ICP (C-level=100, Manager=70, IC=40)
+- industry_match: Direct match=100, adjacent=70, different=30
+- company_size_match: Within ICP range=100, close=70, far=30
+- skills_match: % of required skills present in profile
+- experience_match: Years of relevant experience vs ICP requirement
+- engagement_level: Activity on LinkedIn (posts, comments, frequency)
+- data_quality: Completeness of profile information
+- confidence: How confident you are in this assessment given available data
+
+Return ONLY the JSON object, no other text.

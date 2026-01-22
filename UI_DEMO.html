@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Lead Checker - UI Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      padding: 40px 20px;
+      margin: 0;
+    }
+
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .demo-title {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .demo-title h1 {
+      color: #0a66c2;
+      margin-bottom: 8px;
+    }
+
+    .demo-title p {
+      color: #666;
+      font-size: 14px;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .demo-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .demo-label {
+      text-align: center;
+      font-weight: 600;
+      color: #666;
+      margin-bottom: 16px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Result Card Styles */
+    .result-card {
+      background: white;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .result-header {
+      text-align: center;
+      margin-bottom: 16px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .traffic-light {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .light {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #e0e0e0;
+    }
+
+    .light.active-green {
+      background: #28a745;
+      box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
+    }
+
+    .light.active-yellow {
+      background: #ffc107;
+      box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+    }
+
+    .light.active-red {
+      background: #dc3545;
+      box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+    }
+
+    .score-circle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      font-size: 36px;
+      font-weight: 700;
+      margin: 0 auto 12px;
+      position: relative;
+    }
+
+    .score-circle::after {
+      content: '%';
+      font-size: 15px;
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      opacity: 0.9;
+    }
+
+    .score-high {
+      background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+      color: #155724;
+      border: 3px solid #28a745;
+    }
+
+    .score-medium {
+      background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+      color: #856404;
+      border: 3px solid #ffc107;
+    }
+
+    .score-low {
+      background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+      color: #721c24;
+      border: 3px solid #dc3545;
+    }
+
+    .priority-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .priority-high {
+      background: #28a745;
+      color: white;
+    }
+
+    .priority-medium {
+      background: #ffc107;
+      color: #333;
+    }
+
+    .priority-low {
+      background: #6c757d;
+      color: white;
+    }
+
+    .quick-section {
+      margin-bottom: 14px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #0073b1;
+    }
+
+    .quick-section.red-flags-section {
+      border-left-color: #dc3545;
+      background: #fff5f5;
+    }
+
+    .section-title {
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #0073b1;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-title.red-flags-title {
+      color: #dc3545;
+    }
+
+    .section-icon {
+      font-size: 14px;
+    }
+
+    .bullet-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .bullet-list li {
+      padding-left: 20px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #333;
+      position: relative;
+    }
+
+    .bullet-list li::before {
+      content: '▸';
+      position: absolute;
+      left: 0;
+      color: #0073b1;
+      font-weight: bold;
+    }
+
+    .bullet-list.red-flags li::before {
+      content: '⚠';
+      font-size: 13px;
+    }
+
+    .action-box {
+      background: #fff;
+      border: 2px dashed #0073b1;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .action-box.dm-angle {
+      border-color: #28a745;
+      background: #f8fff9;
+    }
+
+    .action-label {
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #0073b1;
+      margin-bottom: 6px;
+    }
+
+    .action-label.dm-label {
+      color: #28a745;
+    }
+
+    .action-text {
+      font-size: 12px;
+      line-height: 1.4;
+      color: #333;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="demo-container">
+    <div class="demo-title">
+      <h1>🎨 LinkedIn Lead Checker - Nueva UI</h1>
+      <p>Interfaz visual optimizada para decisiones en 5 segundos</p>
+    </div>
+
+    <div class="demo-grid">
+      <!-- HIGH PRIORITY EXAMPLE -->
+      <div class="demo-card">
+        <div class="demo-label">✅ High Priority (Score 85)</div>
+        <div class="result-card">
+          <div class="result-header">
+            <div class="traffic-light">
+              <div class="light active-green"></div>
+              <div class="light"></div>
+              <div class="light"></div>
+            </div>
+            <div class="score-circle score-high">85</div>
+            <span class="priority-badge priority-high">High Priority</span>
+          </div>
+
+          <div class="quick-section">
+            <div class="section-title">
+              <span class="section-icon">💡</span>
+              Key Insights
+            </div>
+            <ul class="bullet-list">
+              <li>VP of Sales at Fortune 500 SaaS company</li>
+              <li>10+ years experience in sales leadership</li>
+              <li>Recently posted about team scaling challenges</li>
+              <li>Active on LinkedIn (posts 3x/week)</li>
+              <li>Mutual connection with Sarah Johnson</li>
+            </ul>
+          </div>
+
+          <div class="action-box">
+            <div class="action-label">📋 Next Step</div>
+            <p class="action-text">Send connection request with personalized note referencing their recent post about sales team challenges.</p>
+          </div>
+
+          <div class="action-box dm-angle">
+            <div class="action-label dm-label">💬 DM Angle</div>
+            <p class="action-text">"Saw your post about scaling sales teams. We help VPs like you increase pipeline by 40% with AI-powered lead scoring. 15-min chat?"</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- MEDIUM PRIORITY EXAMPLE -->
+      <div class="demo-card">
+        <div class="demo-label">⚠️ Medium Priority (Score 55)</div>
+        <div class="result-card">
+          <div class="result-header">
+            <div class="traffic-light">
+              <div class="light"></div>
+              <div class="light active-yellow"></div>
+              <div class="light"></div>
+            </div>
+            <div class="score-circle score-medium">55</div>
+            <span class="priority-badge priority-medium">Medium Priority</span>
+          </div>
+
+          <div class="quick-section">
+            <div class="section-title">
+              <span class="section-icon">💡</span>
+              Key Insights
+            </div>
+            <ul class="bullet-list">
+              <li>Sales Manager at mid-size tech company</li>
+              <li>5 years in current role</li>
+              <li>Occasionally active on LinkedIn</li>
+            </ul>
+          </div>
+
+          <div class="quick-section red-flags-section">
+            <div class="section-title red-flags-title">
+              <span class="section-icon">⚠️</span>
+              Red Flags
+            </div>
+            <ul class="bullet-list red-flags">
+              <li>Company recently announced layoffs</li>
+              <li>Profile mentions budget constraints</li>
+            </ul>
+          </div>
+
+          <div class="action-box">
+            <div class="action-label">📋 Next Step</div>
+            <p class="action-text">Monitor their activity for 2 weeks. Engage with their posts before reaching out directly.</p>
+          </div>
+
+          <div class="action-box dm-angle">
+            <div class="action-label dm-label">💬 DM Angle</div>
+            <p class="action-text">"Hi [Name], noticed you're focused on sales efficiency. Would love to share how we help teams do more with less. Quick chat?"</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOW PRIORITY EXAMPLE -->
+      <div class="demo-card">
+        <div class="demo-label">❌ Low Priority (Score 25)</div>
+        <div class="result-card">
+          <div class="result-header">
+            <div class="traffic-light">
+              <div class="light"></div>
+              <div class="light"></div>
+              <div class="light active-red"></div>
+            </div>
+            <div class="score-circle score-low">25</div>
+            <span class="priority-badge priority-low">Low Priority</span>
+          </div>
+
+          <div class="quick-section">
+            <div class="section-title">
+              <span class="section-icon">💡</span>
+              Key Insights
+            </div>
+            <ul class="bullet-list">
+              <li>Junior sales role at small startup</li>
+              <li>Less than 2 years experience</li>
+            </ul>
+          </div>
+
+          <div class="quick-section red-flags-section">
+            <div class="section-title red-flags-title">
+              <span class="section-icon">⚠️</span>
+              Red Flags
+            </div>
+            <ul class="bullet-list red-flags">
+              <li>Changed jobs 3 times in last year</li>
+              <li>No budget authority</li>
+              <li>Company has only 5 employees</li>
+            </ul>
+          </div>
+
+          <div class="action-box">
+            <div class="action-label">📋 Next Step</div>
+            <p class="action-text">Skip for now. Focus on higher-priority leads. Add to nurture list for future follow-up.</p>
+          </div>
+
+          <div class="action-box dm-angle">
+            <div class="action-label dm-label">💬 DM Angle</div>
+            <p class="action-text">N/A - Not recommended to contact at this time. Wait until they move to a decision-maker role.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align: center; color: #666; padding: 20px; border-top: 2px solid #e0e0e0; margin-top: 20px;">
+      <p style="margin: 0;"><strong>⏱️ Tiempo de comprensión: ~5 segundos por lead</strong></p>
+      <p style="margin: 8px 0 0 0; font-size: 13px;">Semáforo → Score → Bullets → Next Step → DM Angle</p>
+    </div>
+  </div>
+</body>
+</html>
