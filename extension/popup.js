@@ -1,31 +1,203 @@
 /**
- * Popup Script: Handles UI interactions and API calls
- * Flow: Login → Store JWT → Extract Profile → Call Backend → Display Results
+ * Popup Script: Authentication Flow
+ * - Login with email/password
+ * - Store token securely in chrome.storage.local
+ * - Persist login state on popup load
  */
 
 const API_CONFIG = {
-  baseUrl: "http://127.0.0.1:8001",
+  baseUrl: "https://linkedin-lead-checker-api.onrender.com",
   loginEndpoint: "/auth/login",
-  analyzeEndpoint: "/analyze/linkedin",
-  checkoutEndpoint: "/billing/checkout",
-  userEndpoint: "/user",
 };
 
-const elements = {
-  status: document.getElementById("status"),
-  authSection: document.getElementById("authSection"),
-  analyzeSection: document.getElementById("analyzeSection"),
-  resultSection: document.getElementById("resultSection"),
-  resultCard: document.getElementById("resultCard"),
-  upgradeSection: document.getElementById("upgradeSection"),
-  usageInfo: document.getElementById("usageInfo"),
-  emailInput: document.getElementById("emailInput"),
-  loginBtn: document.getElementById("loginBtn"),
-  analyzeBtn: document.getElementById("analyzeBtn"),
-  logoutBtn: document.getElementById("logoutBtn"),
-  upgradeButtons: document.querySelectorAll(".upgrade-btn"),
-  dashboardBtn: document.getElementById("dashboardBtn"),
-};
+// DOM Elements
+const loginForm = document.getElementById("authForm");
+const emailInput = document.getElementById("emailInput");
+const passwordInput = document.getElementById("passwordInput");
+const loginButton = document.getElementById("loginButton");
+const statusMessage = document.getElementById("statusMessage");
+const loginFormContainer = document.getElementById("loginForm");
+const loggedInView = document.getElementById("loggedInView");
+const userEmailDisplay = document.getElementById("userEmail");
+const logoutButton = document.getElementById("logoutButton");
+
+// Initialize on popup load
+document.addEventListener("DOMContentLoaded", () => {
+  checkLoginStatus();
+  setupEventListeners();
+});
+
+/**
+ * Check if user is already logged in
+ */
+function checkLoginStatus() {
+  chrome.storage.local.get(["access_token", "email"], (result) => {
+    if (result.access_token) {
+      showLoggedInView(result.email);
+    } else {
+      showLoginForm();
+    }
+  });
+}
+
+/**
+ * Show login form
+ */
+function showLoginForm() {
+  loginFormContainer.style.display = "block";
+  loggedInView.style.display = "none";
+  clearForm();
+}
+
+/**
+ * Show logged-in state
+ */
+function showLoggedInView(email) {
+  loginFormContainer.style.display = "none";
+  loggedInView.style.display = "block";
+  userEmailDisplay.textContent = `Logged in as: ${email}`;
+}
+
+/**
+ * Setup event listeners
+ */
+function setupEventListeners() {
+  loginForm.addEventListener("submit", handleLogin);
+  logoutButton.addEventListener("click", handleLogout);
+}
+
+/**
+ * Handle login form submission
+ */
+async function handleLogin(e) {
+  e.preventDefault();
+
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if (!email || !password) {
+    showStatus("Please fill in all fields", "error");
+    return;
+  }
+
+  setLoading(true);
+  showStatus("Logging in...", "info");
+
+  try {
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}${API_CONFIG.loginEndpoint}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage =
+        errorData.detail || "Login failed. Please try again.";
+      showStatus(errorMessage, "error");
+      setLoading(false);
+      return;
+    }
+
+    const data = await response.json();
+
+    if (!data.access_token) {
+      showStatus("Invalid response from server", "error");
+      setLoading(false);
+      return;
+    }
+
+    // Store token and email securely
+    chrome.storage.local.set(
+      {
+        access_token: data.access_token,
+        email: email,
+      },
+      () => {
+        showStatus("Login successful!", "success");
+        setLoading(false);
+
+        // Transition to logged-in view after short delay
+        setTimeout(() => {
+          showLoggedInView(email);
+        }, 500);
+      }
+    );
+  } catch (error) {
+    console.error("Login error:", error);
+    showStatus(
+      error.message || "Network error. Please check your connection.",
+      "error"
+    );
+    setLoading(false);
+  }
+}
+
+/**
+ * Handle logout
+ */
+function handleLogout() {
+  chrome.storage.local.remove(["access_token", "email"], () => {
+    showLoginForm();
+    showStatus("Logged out successfully", "success");
+
+    // Clear status after 2 seconds
+    setTimeout(() => {
+      clearStatus();
+    }, 2000);
+  });
+}
+
+/**
+ * Show status message
+ */
+function showStatus(message, type) {
+  statusMessage.textContent = message;
+  statusMessage.className = `status visible ${type}`;
+}
+
+/**
+ * Clear status message
+ */
+function clearStatus() {
+  statusMessage.textContent = "";
+  statusMessage.className = "status";
+}
+
+/**
+ * Set loading state on button
+ */
+function setLoading(isLoading) {
+  loginButton.disabled = isLoading;
+  emailInput.disabled = isLoading;
+  passwordInput.disabled = isLoading;
+
+  if (isLoading) {
+    loginButton.classList.add("loading");
+    loginButton.textContent = "Logging in...";
+  } else {
+    loginButton.classList.remove("loading");
+    loginButton.textContent = "Login";
+  }
+}
+
+/**
+ * Clear form inputs
+ */
+function clearForm() {
+  emailInput.value = "";
+  passwordInput.value = "";
+  clearStatus();
+}
+
 
 // ============================================================================
 // INITIALIZATION

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "LinkedIn Lead Checker",
   "version": "1.0.0",
-  "description": "Analyze LinkedIn profiles instantly with AI-powered lead scoring",
+  "description": "Authenticate and prepare for LinkedIn lead analysis",
   "permissions": [
     "activeTab",
     "scripting",
@@ -15,13 +15,6 @@
     "default_popup": "popup.html",
     "default_title": "LinkedIn Lead Checker"
   },
-  "content_scripts": [
-    {
-      "matches": ["https://www.linkedin.com/in/*"],
-      "js": ["src/content.js"],
-      "run_at": "document_end"
-    }
-  ],
   "background": {
     "service_worker": "src/background.js"
   },

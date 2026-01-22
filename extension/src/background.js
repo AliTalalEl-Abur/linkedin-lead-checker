@@ -1,22 +1,19 @@
 /**
- * Background Service Worker: Handles optional API calls and logging
- * Note: Most API communication is now handled directly from popup.js for simplicity
+ * Background Service Worker (MV3)
+ * Handles minimal background tasks
+ * Main API communication happens in popup.js
  */
 
-const API_CONFIG = {
-  baseUrl: "http://127.0.0.1:8000",
-  analyzeEndpoint: "/analyze/linkedin",
-};
-
-// Optional: Log when extension is installed
+// Log when extension is installed or updated
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("LinkedIn Lead Checker extension installed");
+  console.log("LinkedIn Lead Checker extension installed/updated");
 });
 
-// Optional: Handle any future messaging (kept for extensibility)
+// Listen for messages from popup or content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "logEvent") {
+  if (request.action === "log") {
     console.log("[LinkedIn Lead Checker]", request.message);
-    sendResponse({ ok: true });
+    sendResponse({ success: true });
   }
 });
+
