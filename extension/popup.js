@@ -20,6 +20,11 @@ const loginFormContainer = document.getElementById("loginForm");
 const loggedInView = document.getElementById("loggedInView");
 const userEmailDisplay = document.getElementById("userEmail");
 const logoutButton = document.getElementById("logoutButton");
+const analyzeButton = document.getElementById("analyzeButton");
+const resultsContainer = document.getElementById("resultsContainer");
+const backButton = document.getElementById("backButton");
+const starRating = document.getElementById("starRating");
+const insightsList = document.getElementById("insightsList");
 
 // Initialize on popup load
 document.addEventListener("DOMContentLoaded", () => {
@@ -64,6 +69,8 @@ function showLoggedInView(email) {
 function setupEventListeners() {
   loginForm.addEventListener("submit", handleLogin);
   logoutButton.addEventListener("click", handleLogout);
+  analyzeButton.addEventListener("click", handleAnalyze);
+  backButton.addEventListener("click", hideResults);
 }
 
 /**
@@ -195,6 +202,107 @@ function setLoading(isLoading) {
 function clearForm() {
   emailInput.value = "";
   passwordInput.value = "";
+  clearStatus();
+}
+
+// ============================================================================
+// ANALYZE PREVIEW FEATURE
+// ============================================================================
+
+/**
+ * Mock insights for preview
+ */
+const mockInsights = [
+  "Strong career progression in tech leadership",
+  "Experience aligns well with B2B SaaS market",
+  "Active in professional community with 500+ connections",
+  "Recent role change indicates growth mindset",
+  "Well-established network in target industry"
+];
+
+/**
+ * Handle analyze button click
+ */
+async function handleAnalyze() {
+  showStatus("Getting active tab...", "info");
+  analyzeButton.disabled = true;
+
+  try {
+    // Query active tab
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const activeTab = tabs[0];
+
+    if (!activeTab || !activeTab.url) {
+      showStatus("Could not access active tab", "error");
+      analyzeButton.disabled = false;
+      return;
+    }
+
+    // Validate LinkedIn URL
+    const linkedInProfileRegex = /https:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9\-]+/;
+    if (!linkedInProfileRegex.test(activeTab.url)) {
+      showStatus("❌ Please open a LinkedIn profile (linkedin.com/in/...)", "error");
+      analyzeButton.disabled = false;
+      return;
+    }
+
+    // Generate preview results
+    showStatus("", "");
+    generatePreviewResults();
+    analyzeButton.disabled = false;
+  } catch (error) {
+    console.error("Analyze error:", error);
+    showStatus("Error accessing active tab", "error");
+    analyzeButton.disabled = false;
+  }
+}
+
+/**
+ * Generate and display preview results
+ */
+function generatePreviewResults() {
+  // Generate random score (3-5 stars)
+  const score = Math.floor(Math.random() * 3) + 3; // 3, 4, or 5
+
+  // Render stars
+  renderStars(score);
+
+  // Shuffle and pick 3 random insights
+  const shuffled = [...mockInsights].sort(() => 0.5 - Math.random());
+  const selectedInsights = shuffled.slice(0, 3);
+
+  // Render insights
+  insightsList.innerHTML = "";
+  selectedInsights.forEach((insight) => {
+    const li = document.createElement("li");
+    li.textContent = insight;
+    insightsList.appendChild(li);
+  });
+
+  // Show results, hide analyze button
+  resultsContainer.style.display = "block";
+  analyzeButton.style.display = "none";
+}
+
+/**
+ * Render star rating
+ */
+function renderStars(count) {
+  starRating.innerHTML = "";
+  for (let i = 0; i < 5; i++) {
+    const star = document.createElement("span");
+    star.className = "star";
+    star.textContent = i < count ? "★" : "☆";
+    starRating.appendChild(star);
+  }
+}
+
+/**
+ * Hide results and show analyze button again
+ */
+function hideResults() {
+  resultsContainer.style.display = "none";
+  analyzeButton.style.display = "block";
   clearStatus();
 }
 

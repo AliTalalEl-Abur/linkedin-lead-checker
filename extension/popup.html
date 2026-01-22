@@ -53,7 +53,38 @@
           <p id="userEmail"></p>
         </div>
 
-        <button id="logoutButton" class="btn btn-secondary">Logout</button>
+        <button id="analyzeButton" class="btn btn-primary">
+          Analyze LinkedIn Profile
+        </button>
+
+        <!-- Analysis Results Preview -->
+        <div id="resultsContainer" class="results-container" style="display: none">
+          <div class="results-header">
+            <h2>Lead Assessment Preview</h2>
+            <p class="results-subtitle">Static preview - full AI analysis coming soon</p>
+          </div>
+
+          <div class="fit-score-section">
+            <span class="fit-label">Lead Fit Score:</span>
+            <div id="starRating" class="star-rating"></div>
+          </div>
+
+          <div class="insights-section">
+            <h3>Key Insights</h3>
+            <ul id="insightsList" class="insights-list"></ul>
+          </div>
+
+          <div class="cta-section">
+            <p class="cta-text">🚀 Unlock full AI analysis</p>
+            <p class="cta-subtext">(Coming Soon)</p>
+          </div>
+
+          <button id="backButton" class="btn btn-secondary">← Back</button>
+        </div>
+
+        <button id="logoutButton" class="btn btn-secondary" style="margin-top: 12px">
+          Logout
+        </button>
       </div>
     </div>
 
