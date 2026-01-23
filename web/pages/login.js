@@ -68,7 +68,7 @@ export default function LoginPage() {
         </form>
 
         <p className={styles.note}>
-          We'll create an account if this is your first time.
+          We&apos;ll create an account if this is your first time.
         </p>
       </div>
     </div>
