@@ -1,0 +1,10 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://linkedin-lead-checker.vercel.app/sitemap.xml
+
+# Disallow admin/internal pages (add when needed)
+# Disallow: /api/
+# Disallow: /checkout-result

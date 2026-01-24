@@ -1,12 +1,56 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Button from '../components/Button';
 import Section from '../components/Section';
 import PricingCard from '../components/PricingCard';
+import { getStoredToken, authenticatedFetch } from '../lib/api';
+
+// SEO Metadata
+const META = {
+  title: 'LinkedIn Lead Checker - AI-Powered Lead Qualification',
+  description: 'Qualify LinkedIn leads in seconds with AI analysis. Stop wasting time on bad-fit prospects. Get instant scoring, priority recommendations, and personalized outreach strategies.',
+  url: 'https://linkedin-lead-checker.vercel.app',
+  ogImage: 'https://linkedin-lead-checker.vercel.app/og-image.jpg'
+};
 
 export default function Home() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [userState, setUserState] = useState({
+    loading: true,
+    isAuthenticated: false,
+    hasSubscription: false,
+    plan: null
+  });
+
+  // Check authentication status on mount (client-side only)
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const token = getStoredToken();
+      
+      if (!token) {
+        setUserState({ loading: false, isAuthenticated: false, hasSubscription: false, plan: null });
+        return;
+      }
+
+      try {
+        const data = await authenticatedFetch('/user', { method: 'GET' });
+        const hasActivePlan = data.plan && ['starter', 'pro', 'business'].includes(data.plan);
+        
+        setUserState({
+          loading: false,
+          isAuthenticated: true,
+          hasSubscription: hasActivePlan,
+          plan: data.plan
+        });
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setUserState({ loading: false, isAuthenticated: false, hasSubscription: false, plan: null });
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
 
   const handleEarlyAccess = (e) => {
     e.preventDefault();
@@ -18,12 +62,107 @@ export default function Home() {
     }
   };
 
+  // Dynamic CTA logic
+  const getPrimaryCTA = () => {
+    if (userState.loading) {
+      return {
+        text: 'Install Chrome Extension (Free Preview)',
+        onClick: () => window.open('https://chrome.google.com/webstore', '_blank')
+      };
+    }
+
+    if (!userState.isAuthenticated) {
+      return {
+        text: 'Install Chrome Extension (Free Preview)',
+        onClick: () => window.open('https://chrome.google.com/webstore', '_blank')
+      };
+    }
+
+    if (userState.isAuthenticated && !userState.hasSubscription) {
+      return {
+        text: 'Unlock Full AI Analysis',
+        onClick: () => window.location.href = '/upgrade'
+      };
+    }
+
+    if (userState.hasSubscription) {
+      return {
+        text: 'Open Extension',
+        onClick: () => {
+          // Try to trigger extension or show message
+          alert('Click the LinkedIn Lead Checker icon in your Chrome toolbar to use the extension!');
+        }
+      };
+    }
+  };
+
+  const primaryCTA = getPrimaryCTA();
+
+  // Dynamic CTA for pricing cards
+  const getPricingCTA = (planName) => {
+    if (userState.loading) {
+      return {
+        text: 'Get Started',
+        onClick: () => {}
+      };
+    }
+
+    // Not authenticated - redirect to login/signup
+    if (!userState.isAuthenticated) {
+      return {
+        text: 'Get Started',
+        onClick: () => window.location.href = '/login'
+      };
+    }
+
+    // Authenticated but no subscription - go to checkout
+    if (!userState.hasSubscription) {
+      return {
+        text: 'Subscribe Now',
+        onClick: () => window.location.href = `/billing/checkout?plan=${planName.toLowerCase()}`
+      };
+    }
+
+    // Already subscribed to this plan
+    if (userState.plan === planName.toLowerCase()) {
+      return {
+        text: 'Current Plan',
+        onClick: () => window.location.href = '/dashboard'
+      };
+    }
+
+    // Subscribed to different plan - upgrade/downgrade
+    return {
+      text: 'Switch Plan',
+      onClick: () => window.location.href = `/billing/checkout?plan=${planName.toLowerCase()}`
+    };
+  };
+
   return (
     <>
       <Head>
-        <title>LinkedIn Lead Checker - Instantly Know If a Profile Is Worth Contacting</title>
-        <meta name="description" content="A lightweight Chrome extension that gives you an instant lead fit preview before you waste time writing messages." />
+        <title>{META.title}</title>
+        <meta name="description" content={META.description} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={META.url} />
+        <meta property="og:title" content={META.title} />
+        <meta property="og:description" content={META.description} />
+        <meta property="og:image" content={META.ogImage} />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={META.url} />
+        <meta name="twitter:title" content={META.title} />
+        <meta name="twitter:description" content={META.description} />
+        <meta name="twitter:image" content={META.ogImage} />
+        
+        {/* Additional SEO */}
+        <meta name="keywords" content="LinkedIn, lead qualification, AI, B2B sales, lead scoring, sales automation" />
+        <meta name="author" content="LinkedIn Lead Checker" />
+        <link rel="canonical" href={META.url} />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
@@ -39,14 +178,25 @@ export default function Home() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button variant="primary" onClick={() => window.open('https://chrome.google.com/webstore', '_blank')}>
-                Install Chrome Extension (Free Preview)
+              <Button 
+                variant="primary" 
+                onClick={primaryCTA.onClick}
+                disabled={userState.loading}
+              >
+                {primaryCTA.text}
               </Button>
               <Button variant="secondary" onClick={() => document.getElementById('how-to-try').scrollIntoView({ behavior: 'smooth' })}>
                 See how it works
               </Button>
             </div>
-            <p className="text-sm text-gray-500 mt-3">Works instantly on LinkedIn profiles. No credit card required.</p>
+            <p className="text-sm text-gray-500 mt-3">
+              {!userState.isAuthenticated 
+                ? 'Works instantly on LinkedIn profiles. No credit card required.'
+                : userState.hasSubscription
+                ? `Active ${userState.plan} plan - Ready to analyze leads`
+                : 'Upgrade to unlock unlimited AI-powered analysis'
+              }
+            </p>
 
             {/* Visual placeholder for extension preview */}
             <div className="mt-16 bg-white rounded-lg shadow-2xl p-8 max-w-4xl mx-auto border border-gray-200">
@@ -254,45 +404,68 @@ export default function Home() {
         <Section background="white">
           <div className="text-center mb-12">
             <h2 className="section-title">
-              Pricing (Launching Soon)
+              Simple, Transparent Pricing
             </h2>
             <p className="section-subtitle">
-              Get started with our free preview. Full AI coming soon.
+              Choose the plan that fits your outreach needs
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             <PricingCard
-              title="Free Preview"
-              description="Try before you commit"
+              title="Starter"
+              price="9"
+              period="month"
+              description="Perfect for solo founders & light outreach"
               features={[
-                'Limited lifetime previews',
-                'No credit card required',
-                'Basic lead fit signals',
-                'One-click analysis',
-                'Perfect for testing the tool'
+                'Up to 40 AI-powered lead analyses',
+                'Perfect for solo founders & light outreach',
+                'No credit card required to try preview',
+                'LinkedIn profile analysis',
+                'Lead fit scoring'
               ]}
-              cta="Install Extension"
+              cta={getPricingCTA('starter').text}
+              ctaOnClick={getPricingCTA('starter').onClick}
             />
             
             <PricingCard
               title="Pro"
-              description="Coming Soon"
+              price="19"
+              period="month"
+              description="Built for daily LinkedIn outreach"
               badge="Most Popular"
+              featured={true}
               features={[
-                'Full AI-powered analysis',
-                'Higher usage limits',
-                'Built for daily outreach',
-                'Priority support',
-                'Advanced lead scoring'
+                'Up to 150 AI-powered lead analyses',
+                'Built for daily LinkedIn outreach',
+                'Priority access to new features',
+                'Advanced lead scoring',
+                'Priority support'
               ]}
-              cta="Join Waitlist"
+              cta={getPricingCTA('pro').text}
+              ctaOnClick={getPricingCTA('pro').onClick}
+            />
+            
+            <PricingCard
+              title="Business"
+              price="49"
+              period="month"
+              description="Ideal for teams & agencies"
+              features={[
+                'Up to 500 AI-powered lead analyses',
+                'Ideal for teams & agencies',
+                'Shared usage across members',
+                'Dedicated support',
+                'Custom integrations'
+              ]}
+              cta={getPricingCTA('business').text}
+              ctaOnClick={getPricingCTA('business').onClick}
             />
           </div>
 
           <div className="text-center mt-12">
-            <p className="text-gray-600 text-lg">
-              Pricing will be fair, simple and transparent.
+            <p className="text-gray-600 text-base">
+              Fair usage limits apply. No rollovers. Cancel anytime.
             </p>
           </div>
         </Section>
