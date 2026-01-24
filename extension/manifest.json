@@ -2,10 +2,10 @@
   "manifest_version": 3,
   "name": "LinkedIn Lead Checker",
   "version": "1.0.0",
-  "description": "Authenticate and prepare for LinkedIn lead analysis",
+  "description": "Preview LinkedIn profile fit before reaching out. Free basic info, full AI analysis with subscription.",
+  "author": "LinkedIn Lead Checker",
   "permissions": [
     "activeTab",
-    "scripting",
     "storage"
   ],
   "host_permissions": [
@@ -13,7 +13,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "LinkedIn Lead Checker"
+    "default_title": "LinkedIn Lead Checker - Preview lead fit"
   },
   "background": {
     "service_worker": "src/background.js"
@@ -22,5 +22,12 @@
     "16": "public/icon-16.png",
     "48": "public/icon-48.png",
     "128": "public/icon-128.png"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/in/*"],
+      "js": ["src/content.js"],
+      "run_at": "document_idle"
+    }
+  ]
 }
