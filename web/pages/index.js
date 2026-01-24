@@ -64,36 +64,22 @@ export default function Home() {
 
   // Dynamic CTA logic
   const getPrimaryCTA = () => {
-    if (userState.loading) {
-      return {
-        text: 'Install Chrome Extension (Free Preview)',
-        onClick: () => window.open('https://chrome.google.com/webstore', '_blank')
-      };
-    }
+    // Always point to Chrome Web Store for installation
+    return {
+      text: 'Install Chrome Extension',
+      onClick: () => window.open('https://chrome.google.com/webstore', '_blank')
+    };
+  };
 
+  // Get dynamic subtitle text
+  const getSubtitleText = () => {
     if (!userState.isAuthenticated) {
-      return {
-        text: 'Install Chrome Extension (Free Preview)',
-        onClick: () => window.open('https://chrome.google.com/webstore', '_blank')
-      };
+      return 'Free preview instantly. Full AI analysis requires subscription.';
     }
-
-    if (userState.isAuthenticated && !userState.hasSubscription) {
-      return {
-        text: 'Unlock Full AI Analysis',
-        onClick: () => window.location.href = '/upgrade'
-      };
-    }
-
     if (userState.hasSubscription) {
-      return {
-        text: 'Open Extension',
-        onClick: () => {
-          // Try to trigger extension or show message
-          alert('Click the LinkedIn Lead Checker icon in your Chrome toolbar to use the extension!');
-        }
-      };
+      return `Active ${userState.plan} plan - Full AI analysis enabled`;
     }
+    return 'Preview works instantly. Full AI requires upgrade.';
   };
 
   const primaryCTA = getPrimaryCTA();
@@ -174,7 +160,7 @@ export default function Home() {
               Instantly Know If a LinkedIn Profile<br />Is Worth Contacting
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto">
-              A lightweight Chrome extension that gives you an instant lead fit preview before you waste time writing messages.
+              A lightweight Chrome extension that gives you an instant preview. Full AI-powered analysis available with subscription.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
@@ -185,17 +171,15 @@ export default function Home() {
               >
                 {primaryCTA.text}
               </Button>
-              <Button variant="secondary" onClick={() => document.getElementById('how-to-try').scrollIntoView({ behavior: 'smooth' })}>
-                See how it works
+              <Button variant="secondary" onClick={() => {
+                const section = document.getElementById('how-it-works');
+                if (section) section.scrollIntoView({ behavior: 'smooth' });
+              }}>
+                How it works
               </Button>
             </div>
             <p className="text-sm text-gray-500 mt-3">
-              {!userState.isAuthenticated 
-                ? 'Works instantly on LinkedIn profiles. No credit card required.'
-                : userState.hasSubscription
-                ? `Active ${userState.plan} plan - Ready to analyze leads`
-                : 'Upgrade to unlock unlimited AI-powered analysis'
-              }
+              {userState.loading ? 'Loading...' : getSubtitleText()}
             </p>
 
             {/* Visual placeholder for extension preview */}
@@ -210,16 +194,51 @@ export default function Home() {
           </div>
         </Section>
 
-        {/* QUICK TRY SECTION */}
-        <Section background="white" id="how-to-try">
-          <div className="max-w-3xl mx-auto text-center">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">How to try it in under 30 seconds</h3>
-            <ul className="text-gray-700 space-y-2 text-base list-disc list-inside text-left inline-block">
-              <li>Install the Chrome extension</li>
-              <li>Log in (free)</li>
-              <li>Open any LinkedIn profile</li>
-              <li>Click &quot;Analyze&quot;</li>
-            </ul>
+        {/* HOW IT WORKS SECTION */}
+        <Section background="white" id="how-it-works">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-12 text-center">
+              How it works
+            </h2>
+            
+            <div className="grid md:grid-cols-2 gap-8 mb-12">
+              <div className="bg-blue-50 p-8 rounded-lg">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  🆓 Free Preview (Always Available)
+                </h3>
+                <ul className="text-gray-700 space-y-3">
+                  <li>✓ Install Chrome extension</li>
+                  <li>✓ Visit any LinkedIn profile</li>
+                  <li>✓ Get instant basic fit indicators</li>
+                  <li>✓ See job title, company, location</li>
+                </ul>
+              </div>
+              
+              <div className="bg-gradient-to-br from-blue-100 to-purple-100 p-8 rounded-lg border-2 border-blue-300">
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  ⚡ Full AI Analysis (Subscription)
+                </h3>
+                <ul className="text-gray-700 space-y-3">
+                  <li>✓ AI-powered lead scoring (0-100)</li>
+                  <li>✓ Priority recommendations</li>
+                  <li>✓ Personalized outreach strategy</li>
+                  <li>✓ Deal size estimation</li>
+                  <li>✓ Buying signal detection</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <p className="text-lg text-gray-600 mb-6">
+                Start with the free preview. Upgrade when you're ready for AI-powered insights.
+              </p>
+              <Button 
+                variant="primary" 
+                onClick={() => window.open('https://chrome.google.com/webstore', '_blank')}
+              >
+                Get Started Free
+              </Button>
+            </div>
           </div>
         </Section>
 
