@@ -23,10 +23,16 @@ const loggedInView = document.getElementById("loggedInView");
 const userEmailDisplay = document.getElementById("userEmail");
 const logoutButton = document.getElementById("logoutButton");
 const analyzeButton = document.getElementById("analyzeButton");
+const viewPricingButton = document.getElementById("viewPricingButton");
 const resultsContainer = document.getElementById("resultsContainer");
 const backButton = document.getElementById("backButton");
+const unlockButton = document.getElementById("unlockButton");
 const starRating = document.getElementById("starRating");
 const insightsList = document.getElementById("insightsList");
+const limitModal = document.getElementById("limitModal");
+const upgradePlanButton = document.getElementById("upgradePlanButton");
+const viewUsageButton = document.getElementById("viewUsageButton");
+const closeModalButton = document.getElementById("closeModalButton");
 
 // Initialize on popup load
 document.addEventListener("DOMContentLoaded", () => {
@@ -72,7 +78,12 @@ function setupEventListeners() {
   loginForm.addEventListener("submit", handleLogin);
   logoutButton.addEventListener("click", handleLogout);
   analyzeButton.addEventListener("click", handleAnalyze);
+  viewPricingButton.addEventListener("click", handleViewPricing);
   backButton.addEventListener("click", hideResults);
+  unlockButton.addEventListener("click", handleViewPricing);
+  upgradePlanButton.addEventListener("click", handleUpgrade);
+  viewUsageButton.addEventListener("click", handleViewUsage);
+  closeModalButton.addEventListener("click", closeLimitModal);
 }
 
 /**
@@ -212,14 +223,15 @@ function clearForm() {
 // ============================================================================
 
 /**
- * Mock insights for preview
+ * Generic insights for preview (matches backend)
  */
 const mockInsights = [
-  "Strong career progression in tech leadership",
-  "Experience aligns well with B2B SaaS market",
-  "Active in professional community with 500+ connections",
-  "Recent role change indicates growth mindset",
-  "Well-established network in target industry"
+  "Profile shows professional experience relevant to B2B outreach",
+  "Active LinkedIn presence with industry connections",
+  "Career progression indicates decision-making authority",
+  "Engagement patterns suggest openness to business opportunities",
+  "Profile completeness indicates professional communication preference",
+  "Industry alignment with typical target market profiles"
 ];
 
 /**
@@ -248,13 +260,67 @@ async function handleAnalyze() {
       return;
     }
 
-    // Generate preview results
+    // TODO: Replace with real API call when backend is ready
+    // For now, show preview results
+    // When implementing real API:
+    // 1. Call backend /api/v1/analyze endpoint
+    // 2. Check response for limit_reached or 429 status
+    // 3. If limit reached, call showLimitModal() instead of showing error
+    // 4. Never show technical errors or mention OpenAI to user
+    
+    /*
+    // Example real API call (to be implemented):
+    const result = await chrome.storage.local.get(['access_token']);
+    if (!result.access_token) {
+      showStatus("Please login first", "error");
+      analyzeButton.disabled = false;
+      return;
+    }
+
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/v1/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${result.access_token}`
+      },
+      body: JSON.stringify({ profile_url: activeTab.url })
+    });
+
+    if (response.status === 429 || response.status === 403) {
+      // User hit monthly limit
+      analyzeButton.disabled = false;
+      showLimitModal();
+      return;
+    }
+
+    if (!response.ok) {
+      // Generic error - don't show technical details
+      showStatus("Unable to analyze profile. Please try again.", "error");
+      analyzeButton.disabled = false;
+      return;
+    }
+
+    const data = await response.json();
+    
+    // Check if response indicates limit reached
+    if (data.limit_reached || data.preview_only && data.reason === 'limit_reached') {
+      analyzeButton.disabled = false;
+      showLimitModal();
+      return;
+    }
+
+    // Display real results
+    displayAnalysisResults(data);
+    */
+
+    // Generate preview results (temporary)
     showStatus("", "");
     generatePreviewResults();
     analyzeButton.disabled = false;
   } catch (error) {
     console.error("Analyze error:", error);
-    showStatus("Error accessing active tab", "error");
+    // Don't show technical errors to user
+    showStatus("Unable to analyze profile. Please try again.", "error");
     analyzeButton.disabled = false;
   }
 }
@@ -307,6 +373,60 @@ function hideResults() {
   analyzeButton.style.display = "block";
   clearStatus();
 }
+
+/**
+ * Handle View Pricing button click
+ */
+function handleViewPricing() {
+  // Open pricing.html in a new tab
+  const pricingUrl = chrome.runtime.getURL("pricing.html");
+  chrome.tabs.create({ url: pricingUrl });
+}
+
+/**
+ * Show limit reached modal
+ */
+function showLimitModal() {
+  limitModal.style.display = "flex";
+}
+
+/**
+ * Close limit reached modal
+ */
+function closeLimitModal() {
+  limitModal.style.display = "none";
+}
+
+/**
+ * Handle Upgrade Plan button click
+ */
+function handleUpgrade() {
+  const pricingUrl = chrome.runtime.getURL("pricing.html");
+  chrome.tabs.create({ url: pricingUrl });
+  closeLimitModal();
+}
+
+/**
+ * Handle View Usage button click
+ */
+function handleViewUsage() {
+  chrome.storage.local.get(['access_token'], (result) => {
+    if (!result.access_token) {
+      showStatus("Please login first", "error");
+      closeLimitModal();
+      return;
+    }
+
+    // Open dashboard with usage tab
+    const backendUrl = API_CONFIG.baseUrl;
+    const usageUrl = `${backendUrl}/dashboard#usage`;
+    
+    chrome.tabs.create({ url: usageUrl }, () => {
+      closeLimitModal();
+    });
+  });
+}
+
 // Initialize on popup load
 document.addEventListener("DOMContentLoaded", () => {
   checkLoginStatus();

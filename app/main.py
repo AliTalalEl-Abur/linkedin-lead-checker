@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes.analyze import router as analyze_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.billing import router as billing_router
+from app.api.routes.events import router as events_router
 from app.api.routes.health import router as health_router
 from app.api.routes.user import router as user_router
 from app.core.config import get_settings
@@ -49,6 +50,7 @@ def create_app() -> FastAPI:
     app.include_router(user_router)
     app.include_router(analyze_router)
     app.include_router(billing_router)
+    app.include_router(events_router)
 
     # Ensure all models are imported before creating tables
     from app import models as _models  # noqa: F401

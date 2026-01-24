@@ -96,6 +96,12 @@ class AIAnalysisService:
         Raises:
             RuntimeError: If OpenAI API fails after retries
         """
+        # CRITICAL: Final safety check - block if OpenAI disabled
+        settings = get_settings()
+        if not settings.openai_enabled:
+            logger.error("AI_CALL_BLOCKED_OPENAI_DISABLED: analyze_profile called but OpenAI is disabled")
+            raise RuntimeError("OpenAI API is disabled. Cannot perform AI analysis.")
+        
         logger.info("Starting profile analysis (mock=%s)", self.use_mock)
         start_time = time.time()
         
@@ -380,6 +386,12 @@ def run_fit(profile: Dict, icp: Optional[Union[ICPConfig, Dict]] = None, *, api_
     """Run the fit scoring prompt and return parsed JSON as FitScoringResult.
     Fails if the model does not return valid JSON.
     """
+    # CRITICAL: Final safety check - block if OpenAI disabled
+    settings = get_settings()
+    if not settings.openai_enabled:
+        logger.error("AI_CALL_BLOCKED_OPENAI_DISABLED: run_fit called but OpenAI is disabled")
+        raise RuntimeError("OpenAI API is disabled. Cannot perform AI analysis.")
+    
     service = get_ai_service(api_key)
     # Ensure ICP config is the right type
     icp_config = icp if isinstance(icp, ICPConfig) else (ICPConfig(**icp) if isinstance(icp, dict) else None)
@@ -402,6 +414,12 @@ def run_decision(qualification: Union[FitScoringResult, Dict], profile: Optional
     """Run the decision writer prompt and return parsed JSON as DecisionResult.
     Fails if the model does not return valid JSON.
     """
+    # CRITICAL: Final safety check - block if OpenAI disabled
+    settings = get_settings()
+    if not settings.openai_enabled:
+        logger.error("AI_CALL_BLOCKED_OPENAI_DISABLED: run_decision called but OpenAI is disabled")
+        raise RuntimeError("OpenAI API is disabled. Cannot perform AI analysis.")
+    
     service = get_ai_service(api_key)
     fit_result = qualification if isinstance(qualification, FitScoringResult) else FitScoringResult(**qualification)
     if service.use_mock:

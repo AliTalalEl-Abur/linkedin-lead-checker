@@ -4,6 +4,7 @@ import Button from '../components/Button';
 import Section from '../components/Section';
 import PricingCard from '../components/PricingCard';
 import { getStoredToken, authenticatedFetch } from '../lib/api';
+import { trackEvent } from '../lib/tracking';
 
 // SEO Metadata
 const META = {
@@ -56,6 +57,7 @@ export default function Home() {
     e.preventDefault();
     // Simple validation - no backend required
     if (email && email.includes('@')) {
+      trackEvent('waitlist_join', 'landing');
       setSubmitted(true);
       // In production, this would send to your email collection service
       console.log('Early access email:', email);
@@ -67,7 +69,10 @@ export default function Home() {
     // Always point to Chrome Web Store for installation
     return {
       text: 'Install Chrome Extension',
-      onClick: () => window.open('https://chrome.google.com/webstore', '_blank')
+      onClick: () => {
+        trackEvent('install_extension_click', 'landing');
+        window.open('https://chrome.google.com/webstore', '_blank');
+      }
     };
   };
 
@@ -234,7 +239,10 @@ export default function Home() {
               </p>
               <Button 
                 variant="primary" 
-                onClick={() => window.open('https://chrome.google.com/webstore', '_blank')}
+                onClick={() => {
+                  trackEvent('install_extension_click', 'how-it-works');
+                  window.open('https://chrome.google.com/webstore', '_blank');
+                }}
               >
                 Get Started Free
               </Button>

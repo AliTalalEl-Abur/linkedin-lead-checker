@@ -18,20 +18,22 @@ logger = logging.getLogger(__name__)
 class StripeService:
     """Service for Stripe payment integration."""
 
-    def __init__(self, api_key: str, webhook_secret: str, pro_price_id: str, team_price_id: Optional[str] = None):
+    def __init__(self, api_key: str, webhook_secret: str, starter_price_id: Optional[str] = None, pro_price_id: Optional[str] = None, business_price_id: Optional[str] = None):
         """
         Initialize Stripe service.
         
         Args:
             api_key: Stripe secret API key
             webhook_secret: Stripe webhook signing secret
-            pro_price_id: Stripe price ID for Pro plan ($19/mo - 100 analyses/week)
-            team_price_id: Stripe price ID for Team plan ($39/mo - 300 analyses/week)
+            starter_price_id: Stripe price ID for Starter plan ($9/mo - 40 analyses/month)
+            pro_price_id: Stripe price ID for Pro plan ($19/mo - 150 analyses/month)
+            business_price_id: Stripe price ID for Business plan ($49/mo - 500 analyses/month)
         """
         stripe.api_key = api_key
         self.webhook_secret = webhook_secret
+        self.starter_price_id = starter_price_id
         self.pro_price_id = pro_price_id
-        self.team_price_id = team_price_id
+        self.business_price_id = business_price_id
 
     def create_checkout_session(
         self,
@@ -41,14 +43,14 @@ class StripeService:
         plan: str = "pro",
     ) -> Dict[str, str]:
         """
-        Create a Stripe checkout session for Pro or Team plan upgrade.
+        Create a Stripe checkout session for Starter, Pro or Business plan upgrade.
         
         Args:
             user_id: User ID for metadata
             email: Customer email
             return_url: URL to return to after checkout (include {CHECKOUT_SESSION_ID} placeholder)
                        e.g., "https://example.com/checkout?session_id={CHECKOUT_SESSION_ID}"
-            plan: Plan to subscribe to ("pro" or "team")
+            plan: Plan to subscribe to ("starter", "pro", or "business")
         
         Returns:
             dict with:
@@ -59,11 +61,18 @@ class StripeService:
             stripe.error.StripeError: If session creation fails
         """
         # Select price ID based on plan
-        if plan == "team" and self.team_price_id:
-            price_id = self.team_price_id
-        else:
+        if plan == "starter" and self.starter_price_id:
+            price_id = self.starter_price_id
+        elif plan == "business" and self.business_price_id:
+            price_id = self.business_price_id
+        elif plan == "pro" and self.pro_price_id:
             price_id = self.pro_price_id
-            plan = "pro"  # Default to pro if team not configured
+        else:
+            # Default to pro if specified plan not configured
+            price_id = self.pro_price_id or self.starter_price_id or self.business_price_id
+            if not price_id:
+                raise ValueError("No Stripe price IDs configured")
+            plan = "pro"
         
         try:
             session = stripe.checkout.Session.create(
@@ -152,6 +161,71 @@ class StripeService:
         db.commit()
         
         logger.info(f"Reverted user {user.id} to free plan, subscription deleted")
+        return user
+
+    def handle_subscription_updated(
+        self,
+        subscription: Dict[str, Any],
+        db: Session,
+    ) -> Optional[User]:
+        """
+        Handle customer.subscription.updated webhook event.
+        Updates user plan when subscription changes (upgrades/downgrades).
+        
+        Args:
+            subscription: Stripe subscription object
+            db: Database session
+        
+        Returns:
+            Updated User object, or None if user not found
+        """
+        customer_id = subscription.get("customer")
+        subscription_id = subscription.get("id")
+        status = subscription.get("status")
+        
+        # Find user by stripe_customer_id
+        user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+        if not user:
+            logger.warning(f"Subscription updated for unknown customer {customer_id}")
+            return None
+        
+        # If subscription is cancelled or past_due, revert to free
+        if status in ["canceled", "unpaid", "past_due"]:
+            user.plan = "free"
+            logger.info(f"Reverted user {user.id} to free plan, subscription status: {status}")
+            db.commit()
+            return user
+        
+        # If subscription is active or trialing, determine plan from price
+        if status in ["active", "trialing"]:
+            # Get the price ID from subscription items
+            items = subscription.get("items", {}).get("data", [])
+            if not items:
+                logger.warning(f"No subscription items found for {subscription_id}")
+                return user
+            
+            price_id = items[0].get("price", {}).get("id")
+            
+            # Determine plan based on price_id
+            plan = "free"
+            if price_id == self.starter_price_id:
+                plan = "starter"
+            elif price_id == self.pro_price_id:
+                plan = "pro"
+            elif price_id == self.business_price_id:
+                plan = "business"
+            else:
+                logger.warning(f"Unknown price_id {price_id} for subscription {subscription_id}")
+                return user
+            
+            user.plan = plan
+            user.stripe_subscription_id = subscription_id
+            logger.info(f"Updated user {user.id} to {plan} plan via subscription update")
+            db.commit()
+            return user
+        
+        # For other statuses, log but don't change plan
+        logger.info(f"Subscription {subscription_id} status: {status}, no plan change")
         return user
 
     def verify_webhook_signature(self, payload: bytes, signature: str) -> Dict[str, Any]:

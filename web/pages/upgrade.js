@@ -21,9 +21,9 @@ export default function Upgrade() {
     setError('');
 
     try {
-      // Get return URL (with localhost fallback for development)
+      // Get return URL from environment or construct from current location
       const returnUrl = process.env.NEXT_PUBLIC_CHECKOUT_RETURN_URL || 
-        `http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}`;
+        `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/checkout-result?session_id={CHECKOUT_SESSION_ID}`;
 
       const response = await authenticatedFetch('/billing/checkout', {
         method: 'POST',

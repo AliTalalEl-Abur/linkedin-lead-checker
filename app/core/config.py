@@ -30,6 +30,15 @@ class Settings(BaseSettings):
             "stripe_secret_key",
         ),
     )
+    stripe_price_starter_id: Optional[str] = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "STRIPE_PRICE_STARTER_ID",
+            "STRIPE_STARTER_PRICE_ID",
+            "stripe_price_starter_id",
+            "stripe_starter_price_id",
+        ),
+    )
     stripe_price_pro_id: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices(
@@ -39,13 +48,13 @@ class Settings(BaseSettings):
             "stripe_pro_price_id",
         ),
     )
-    stripe_price_team_id: Optional[str] = Field(
+    stripe_price_business_id: Optional[str] = Field(
         default=None,
         validation_alias=AliasChoices(
-            "STRIPE_PRICE_TEAM_ID",
-            "STRIPE_TEAM_PRICE_ID",
-            "stripe_price_team_id",
-            "stripe_team_price_id",
+            "STRIPE_PRICE_BUSINESS_ID",
+            "STRIPE_BUSINESS_PRICE_ID",
+            "stripe_price_business_id",
+            "stripe_business_price_id",
         ),
     )
     stripe_webhook_secret: Optional[str] = Field(
@@ -58,13 +67,16 @@ class Settings(BaseSettings):
 
     # Usage Limits & Cost Control
     # FREE: 3 análisis TOTAL lifetime (no reset) - Cost: $0.09 máx
-    # PRO: 100 análisis/semana - Cost: $12/mes máx @ $19/mes
-    # TEAM: 300 análisis/semana - Cost: $36/mes máx @ $39/mes
+    # STARTER: 40 análisis/mes - Cost: $1.20/mes máx @ $9/mes
+    # PRO: 150 análisis/mes - Cost: $4.50/mes máx @ $19/mes
+    # BUSINESS: 500 análisis/mes - Cost: $15/mes máx @ $49/mes
     usage_limit_free: int = Field(default=3, description="FREE plan lifetime limit")
-    usage_limit_pro: int = Field(default=100, description="PRO plan weekly limit")
-    usage_limit_team: int = Field(default=300, description="TEAM plan weekly limit")
-    revenue_per_pro_user: float = Field(default=12.0, description="Monthly AI budget contribution per active Pro user")
-    revenue_per_team_user: float = Field(default=36.0, description="Monthly AI budget contribution per active Team user")
+    usage_limit_starter: int = Field(default=40, description="STARTER plan monthly limit")
+    usage_limit_pro: int = Field(default=150, description="PRO plan monthly limit")
+    usage_limit_business: int = Field(default=500, description="BUSINESS plan monthly limit")
+    revenue_per_starter_user: float = Field(default=1.20, description="Monthly AI budget contribution per active Starter user")
+    revenue_per_pro_user: float = Field(default=4.50, description="Monthly AI budget contribution per active Pro user")
+    revenue_per_business_user: float = Field(default=15.0, description="Monthly AI budget contribution per active Business user")
     ai_cost_per_analysis_usd: float = Field(default=0.03, description="Estimated AI cost per successful analysis in USD")
     
     # Rate Limiting: 1 análisis cada 30 segundos

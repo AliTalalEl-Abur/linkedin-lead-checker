@@ -127,7 +127,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
 class CheckoutRequest(BaseModel):
     """Request to create a Stripe checkout session."""
     return_url: str  # URL to redirect after checkout (should include {CHECKOUT_SESSION_ID})
-    plan: str = "pro"  # "pro" or "team"
+    plan: str = "pro"  # "starter", "pro", or "business"
 
 
 class CheckoutResponse(BaseModel):
@@ -142,16 +142,17 @@ def get_stripe_service() -> StripeService:
     return StripeService(
         api_key=settings.stripe_api_key,
         webhook_secret=settings.stripe_webhook_secret,
+        starter_price_id=settings.stripe_price_starter_id,
         pro_price_id=settings.stripe_price_pro_id,
-        team_price_id=settings.stripe_price_team_id,
+        business_price_id=settings.stripe_price_business_id,
     )
 
 
 @router.post(
     "/checkout",
     response_model=CheckoutResponse,
-    summary="Create Stripe checkout session for Pro plan upgrade",
-    description="Requires authentication. Returns sessionId and checkout URL.",
+    summary="Create Stripe checkout session for subscription upgrade",
+    description="Requires authentication. Returns sessionId and checkout URL for Starter, Pro, or Business plan.",
     responses={
         200: {"description": "Checkout session created successfully"},
         401: {"description": "Not authenticated"},
@@ -165,17 +166,24 @@ def create_checkout_session(
     stripe_service: StripeService = Depends(get_stripe_service),
 ):
     """
-    Create a Stripe checkout session for upgrading to Pro plan.
+    Create a Stripe checkout session for upgrading to paid plan.
     
-    Free users can call this endpoint. The checkout URL will allow payment for a Pro subscription.
-    After successful payment, a Stripe webhook will update the user's plan to "pro".
+    Plans:
+    - Starter: $9/month - 40 analyses/month
+    - Pro: $19/month - 150 analyses/month
+    - Business: $49/month - 500 analyses/month
+    
+    After successful payment, a Stripe webhook will update the user's plan.
     """
     if not request.return_url:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="return_url required")
 
     plan = request.plan.lower().strip() if request.plan else "pro"
-    if plan not in ("pro", "team"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="plan must be 'pro' or 'team'")
+    if plan not in ("starter", "pro", "business"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="plan must be 'starter', 'pro', or 'business'"
+        )
 
     try:
         result = stripe_service.create_checkout_session(
@@ -212,8 +220,9 @@ async def handle_stripe_webhook(
     
     Verifies webhook signature using HMAC-SHA256.
     Processes:
-    - checkout.session.completed: Updates user.plan to "pro"
+    - checkout.session.completed: Updates user.plan based on metadata (starter/pro/business)
     - customer.subscription.deleted: Reverts user.plan to "free"
+    - customer.subscription.updated: Handles upgrades/downgrades between plans
     """
     # Get raw body and signature header
     body = await request.body()
@@ -238,6 +247,10 @@ async def handle_stripe_webhook(
 
     elif event_type == "customer.subscription.deleted":
         stripe_service.handle_subscription_deleted(event_data, db)
+        return {"status": "ok", "event": event_type}
+    
+    elif event_type == "customer.subscription.updated":
+        stripe_service.handle_subscription_updated(event_data, db)
         return {"status": "ok", "event": event_type}
 
     else:

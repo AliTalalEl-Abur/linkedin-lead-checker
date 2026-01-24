@@ -58,26 +58,33 @@
           Analyze LinkedIn Profile
         </button>
 
+        <button id="viewPricingButton" class="btn btn-secondary" style="margin-top: 12px">
+          View Pricing Plans
+        </button>
+
         <!-- RESULTS CONTAINER -->
         <div id="resultsContainer" class="results-container" style="display: none">
           <div class="results-header">
-            <h2>Lead Assessment Preview</h2>
-            <p class="results-subtitle">Static preview - full AI analysis coming soon</p>
+            <h2>Preview Analysis</h2>
+            <p class="results-subtitle">This is a preview. Full AI analysis requires a subscription.</p>
           </div>
 
           <div class="fit-score-section">
-            <span class="fit-label">Lead Fit Score:</span>
+            <span class="fit-label">Estimated Fit Score:</span>
             <div id="starRating" class="star-rating"></div>
           </div>
 
           <div class="insights-section">
-            <h3>Key Insights</h3>
+            <h3>Generic Insights</h3>
             <ul id="insightsList" class="insights-list"></ul>
           </div>
 
           <div class="cta-section">
-            <p class="cta-text">🚀 Unlock full AI analysis</p>
-            <p class="cta-subtext">(Coming Soon)</p>
+            <p class="cta-text">🔓 Unlock Full AI Analysis</p>
+            <p class="cta-subtext">Get personalized insights powered by AI</p>
+            <button id="unlockButton" class="btn btn-primary" style="margin-top: 12px">
+              View Pricing Plans
+            </button>
           </div>
 
           <button id="backButton" class="btn btn-secondary">← Back</button>
@@ -86,6 +93,31 @@
         <button id="logoutButton" class="btn btn-secondary" style="margin-top: 12px">
           Logout
         </button>
+      </div>
+
+      <!-- LIMIT REACHED MODAL -->
+      <div id="limitModal" class="modal-overlay" style="display: none">
+        <div class="modal-content">
+          <div class="modal-header">
+            <span class="warning-icon">⚠️</span>
+            <h2>Monthly Limit Reached</h2>
+          </div>
+          <div class="modal-body">
+            <p>You've reached your monthly AI analysis limit.</p>
+            <p>Upgrade your plan to keep analyzing LinkedIn profiles without interruptions.</p>
+          </div>
+          <div class="modal-actions">
+            <button id="upgradePlanButton" class="btn btn-primary">
+              Upgrade Plan
+            </button>
+            <button id="viewUsageButton" class="btn btn-secondary">
+              View Usage
+            </button>
+            <button id="closeModalButton" class="btn btn-link">
+              Close
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -1,4 +1,11 @@
 /**
+ * API Configuration
+ * Uses NEXT_PUBLIC_API_URL from environment variables
+ * Falls back to localhost for local development
+ */
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+
+/**
  * Validate email format
  */
 export function isValidEmail(email) {

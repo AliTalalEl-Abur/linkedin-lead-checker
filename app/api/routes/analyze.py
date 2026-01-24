@@ -29,10 +29,21 @@ from app.services import get_ai_service, run_fit, run_decision
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyze", tags=["analyze"])
 
-FREE_COPY = "See example lead analysis. Upgrade to unlock real checks."
+FREE_COPY = "This is a preview. Full AI analysis requires a subscription."
 PRO_COPY = "Unlimited lead checks (fair use). Real AI-powered analysis."
 NO_BUDGET_COPY = "Real-time analysis temporarily unavailable. Upgrade to unlock."
-PREVIEW_BANNER = "Example result - upgrade to unlock real lead checks"
+PREVIEW_BANNER = "Preview Analysis"
+PREVIEW_MESSAGE = "This is a preview. Full AI analysis requires a subscription."
+
+# Generic preview insights that are useful but clearly limited
+PREVIEW_INSIGHTS = [
+    "Profile shows professional experience relevant to B2B outreach",
+    "Active LinkedIn presence with industry connections",
+    "Career progression indicates decision-making authority",
+    "Engagement patterns suggest openness to business opportunities",
+    "Profile completeness indicates professional communication preference",
+    "Industry alignment with typical target market profiles"
+]
 
 
 def _extract_identity(profile_data: dict) -> Tuple[str, str]:
@@ -60,8 +71,18 @@ def _extract_identity(profile_data: dict) -> Tuple[str, str]:
     return name or "This lead", headline
 
 
-def _determine_preview(user: User, budget_status: BudgetStatus) -> Tuple[bool, str | None]:
+def _determine_preview(user: User, budget_status: BudgetStatus, db: Session) -> Tuple[bool, str | None]:
     """Apply fundamental gating rules to decide preview vs real analysis."""
+    # CRITICAL: Check OPENAI_ENABLED first
+    settings = get_settings()
+    if not settings.openai_enabled:
+        logger.warning(
+            "AI_CALL_BLOCKED_OPENAI_DISABLED: user_id=%d, plan=%s",
+            user.id,
+            user.plan,
+        )
+        return True, "openai_disabled"
+    
     if budget_status.reason == "exhausted":
         logger.critical(
             "Global AI budget exhausted (spend=%.2f, budget=%.2f)",
@@ -74,7 +95,7 @@ def _determine_preview(user: User, budget_status: BudgetStatus) -> Tuple[bool, s
         )
 
     if budget_status.reason in {"no_subscribers", "no_budget"}:
-        if user.plan in {"pro", "team"}:
+        if user.plan in {"pro", "team", "starter", "business"}:
             logger.warning(
                 "User attempted real analysis without budget (user_id=%d, plan=%s, reason=%s)",
                 user.id,
@@ -83,8 +104,35 @@ def _determine_preview(user: User, budget_status: BudgetStatus) -> Tuple[bool, s
             )
         return True, budget_status.reason
 
-    if user.plan not in {"pro", "team"}:
+    # CRITICAL: Check if user has active subscription
+    if user.plan not in {"starter", "pro", "business"}:
+        logger.warning(
+            "AI_CALL_BLOCKED_NO_SUBSCRIPTION: user_id=%d, plan=%s",
+            user.id,
+            user.plan,
+        )
         return True, "free_plan"
+    
+    # CRITICAL: Check remaining_analyses BEFORE allowing AI call
+    usage_stats = get_usage_stats(user, db)
+    if usage_stats["remaining"] <= 0:
+        logger.warning(
+            "AI_CALL_BLOCKED_LIMIT_REACHED: user_id=%d, plan=%s, used=%d, limit=%d",
+            user.id,
+            user.plan,
+            usage_stats["used"],
+            usage_stats["limit"],
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "monthly_limit_reached",
+                "message": "You've reached your monthly AI analysis limit. Upgrade your plan to keep analyzing LinkedIn profiles without interruptions.",
+                "used": usage_stats["used"],
+                "limit": usage_stats["limit"],
+                "plan": user.plan
+            }
+        )
 
     return False, None
 
@@ -110,53 +158,82 @@ def _serve_cached_linkedin(db: Session, profile_hash: str) -> AnalyzeLinkedInRes
 
 
 def _preview_profile_response(profile_data: dict, user: User, db: Session) -> AnalyzeProfileResponse:
+    """Generate useful but limited preview response that doesn't consume AI analysis."""
+    import random
+    
     usage_stats = get_usage_stats(user, db)
     name, headline = _extract_identity(profile_data)
+    
+    # Generate consistent but varied score (60-80 range)
+    score = 65.0 + (hash(str(profile_data)) % 16)  # 65-80
+    
+    # Select 3 generic insights
+    selected_insights = random.sample(PREVIEW_INSIGHTS, min(3, len(PREVIEW_INSIGHTS)))
+    insights_text = "\n".join([f"• {insight}" for insight in selected_insights])
+    
+    reasoning = f"{PREVIEW_BANNER}\n\n{insights_text}\n\n💡 {PREVIEW_MESSAGE}\n\nLead: {name} | {headline}"
+    
+    logger.info(
+        "Preview response generated (NO AI call, NO usage recorded): user_id=%d, plan=%s",
+        user.id,
+        user.plan
+    )
+    
     return AnalyzeProfileResponse(
         should_contact=True,
-        score=72.0,
-        reasoning=f"{PREVIEW_BANNER}. Lead: {name} - {headline}",
+        score=score,
+        reasoning=reasoning,
         usage_remaining=usage_stats["remaining"],
         preview=True,
-        message=FREE_COPY,
+        message=PREVIEW_MESSAGE,
     )
 
 
 def _preview_linkedin_response(profile: dict, user: User, message: str) -> AnalyzeLinkedInResponse:
+    """Generate useful but limited LinkedIn preview that doesn't consume AI analysis."""
+    import random
+    
     name, headline = _extract_identity(profile)
-    qualification = FitScoringResult(
-        overall_score=72.0,
-        dimension_scores=DimensionScores(
-            seniority_match=70.0,
-            industry_match=72.0,
-            company_size_match=68.0,
-            skills_match=75.0,
-            experience_match=70.0,
-            engagement_level=65.0,
-        ),
-        positive_signals=[
-            f"Relevant headline: {headline}",
-            "Recent role aligns with ICP",
-            "Engagement signals look promising",
-        ],
-        negative_signals=["Preview mode - real AI disabled"],
-        data_quality=70.0,
-        confidence=55.0,
+    
+    # Generate consistent but varied score (60-80 range)
+    base_score = 65.0 + (hash(str(profile)) % 16)  # 65-80
+    
+    # Select 3 random generic insights
+    selected_insights = random.sample(PREVIEW_INSIGHTS, min(3, len(PREVIEW_INSIGHTS)))
+    
+    logger.info(
+        "LinkedIn preview generated (NO AI call, NO usage recorded): user_id=%d, plan=%s",
+        user.id,
+        user.plan
     )
+    
+    qualification = FitScoringResult(
+        overall_score=base_score,
+        dimension_scores=DimensionScores(
+            seniority_match=base_score - 5.0,
+            industry_match=base_score,
+            company_size_match=base_score - 7.0,
+            skills_match=base_score + 5.0,
+            experience_match=base_score - 2.0,
+            engagement_level=base_score - 10.0,
+        ),
+        positive_signals=selected_insights,
+        negative_signals=["⚠️ Preview mode - upgrade for full AI analysis"],
+        data_quality=70.0,
+        confidence=50.0,
+    )
+    
     ui = AnalyzeLinkedInUI(
         should_contact=True,
         priority="medium",
-        score=72.0,
-        reasoning=f"{PREVIEW_BANNER}. Lead: {name} - {headline}",
-        key_points=[
-            "Example signals only",
-            "Upgrade to unlock live checks",
-            "No usage consumed in preview",
-        ],
-        suggested_approach="Preview only: upgrade for AI-personalized outreach.",
-        red_flags=["Preview result - not AI validated"],
-        next_steps="Upgrade to Pro for real-time, AI-powered analysis.",
+        score=base_score,
+        reasoning=f"{PREVIEW_BANNER}\\n\\n💡 {PREVIEW_MESSAGE}\\n\\nLead: {name} | {headline}",
+        key_points=selected_insights,
+        suggested_approach="🔓 Unlock full AI analysis to get personalized outreach recommendations.",
+        red_flags=["This is preview data - not personalized AI analysis"],
+        next_steps="Subscribe to unlock full AI-powered lead analysis with personalized insights.",
     )
+    
     return AnalyzeLinkedInResponse(
         qualification=qualification,
         ui=ui,
@@ -198,16 +275,32 @@ def analyze_profile(
         )
 
     budget_status = evaluate_budget_status(db)
-    preview_mode, preview_reason = _determine_preview(current_user, budget_status)
+    preview_mode, preview_reason = _determine_preview(current_user, budget_status, db)
     profile_data = request.linkedin_profile_data or {}
 
     if preview_mode:
-        logger.info(
-            "Preview Mode activated for user_id=%d (plan=%s, reason=%s)",
-            current_user.id,
-            current_user.plan,
-            preview_reason,
-        )
+        # Log based on specific reason
+        if preview_reason == "limit_reached":
+            logger.warning(
+                "AI_CALL_BLOCKED_LIMIT_REACHED: Preview mode (user_id=%d, plan=%s, reason=%s)",
+                current_user.id,
+                current_user.plan,
+                preview_reason,
+            )
+        elif preview_reason in {"free_plan", "openai_disabled"}:
+            logger.info(
+                "AI_CALL_BLOCKED_NO_SUBSCRIPTION: Preview mode (user_id=%d, plan=%s, reason=%s)",
+                current_user.id,
+                current_user.plan,
+                preview_reason,
+            )
+        else:
+            logger.info(
+                "Preview Mode activated for user_id=%d (plan=%s, reason=%s)",
+                current_user.id,
+                current_user.plan,
+                preview_reason,
+            )
         return _preview_profile_response(profile_data, current_user, db)
 
     profile_hash = build_profile_hash(profile_data)
@@ -218,12 +311,43 @@ def analyze_profile(
     # Rate limit and plan cap
     check_usage_limit(current_user, db)
 
+    # CRITICAL SAFETY CHECK: Double-verify before OpenAI call
+    settings = get_settings()
+    if not settings.openai_enabled:
+        logger.error(
+            "AI_CALL_BLOCKED_OPENAI_DISABLED: Critical safety check failed - OpenAI disabled but reached AI call point (user_id=%d)",
+            current_user.id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service is currently disabled. Please try again later.",
+        )
+    
+    # Double-check remaining analyses
+    usage_stats = get_usage_stats(current_user, db)
+    if usage_stats["remaining"] <= 0:
+        logger.error(
+            "AI_CALL_BLOCKED_LIMIT_REACHED: Critical safety check failed - limit reached but passed validation (user_id=%d, used=%d, limit=%d)",
+            current_user.id,
+            usage_stats["used"],
+            usage_stats["limit"],
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"You've reached your monthly limit ({usage_stats['limit']} analyses/month). Your limit will reset on the 1st of next month.",
+        )
+
     # Get user's ICP config (if set)
     icp_config = None
     if current_user.icp_config_json:
         icp_config = ICPConfig(**current_user.icp_config_json)
 
-    logger.info("Starting profile analysis for user_id=%d (plan=%s)", current_user.id, current_user.plan)
+    logger.info(
+        "AI_CALL_APPROVED: Starting profile analysis (user_id=%d, plan=%s, remaining=%d)",
+        current_user.id,
+        current_user.plan,
+        usage_stats["remaining"],
+    )
 
     try:
         ai_service = get_ai_service()
@@ -297,17 +421,35 @@ def analyze_linkedin(
         )
 
     budget_status = evaluate_budget_status(db)
-    preview_mode, preview_reason = _determine_preview(current_user, budget_status)
+    preview_mode, preview_reason = _determine_preview(current_user, budget_status, db)
     profile = request.profile_extract or {}
 
     if preview_mode:
-        logger.info(
-            "Preview Mode activated for LinkedIn endpoint (user_id=%d, plan=%s, reason=%s)",
-            current_user.id,
-            current_user.plan,
-            preview_reason,
-        )
-        preview_message = NO_BUDGET_COPY if preview_reason in {"no_subscribers", "no_budget"} else FREE_COPY
+        # Log based on specific reason
+        if preview_reason == "limit_reached":
+            logger.warning(
+                "AI_CALL_BLOCKED_LIMIT_REACHED: Preview mode for LinkedIn (user_id=%d, plan=%s, reason=%s)",
+                current_user.id,
+                current_user.plan,
+                preview_reason,
+            )
+            preview_message = "You've reached your monthly analysis limit. Upgrade or wait for your limit to reset."
+        elif preview_reason in {"free_plan", "openai_disabled"}:
+            logger.info(
+                "AI_CALL_BLOCKED_NO_SUBSCRIPTION: Preview mode for LinkedIn (user_id=%d, plan=%s, reason=%s)",
+                current_user.id,
+                current_user.plan,
+                preview_reason,
+            )
+            preview_message = FREE_COPY
+        else:
+            logger.info(
+                "Preview Mode activated for LinkedIn endpoint (user_id=%d, plan=%s, reason=%s)",
+                current_user.id,
+                current_user.plan,
+                preview_reason,
+            )
+            preview_message = NO_BUDGET_COPY if preview_reason in {"no_subscribers", "no_budget"} else FREE_COPY
         return _preview_linkedin_response(profile, current_user, preview_message)
 
     profile_hash = build_profile_hash(profile)
@@ -317,6 +459,32 @@ def analyze_linkedin(
 
     # Rate limit and plan cap
     check_usage_limit(current_user, db)
+
+    # CRITICAL SAFETY CHECK: Double-verify before OpenAI call
+    settings = get_settings()
+    if not settings.openai_enabled:
+        logger.error(
+            "AI_CALL_BLOCKED_OPENAI_DISABLED: Critical safety check failed - OpenAI disabled but reached AI call point (user_id=%d)",
+            current_user.id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service is currently disabled. Please try again later.",
+        )
+    
+    # Double-check remaining analyses
+    usage_stats = get_usage_stats(current_user, db)
+    if usage_stats["remaining"] <= 0:
+        logger.error(
+            "AI_CALL_BLOCKED_LIMIT_REACHED: Critical safety check failed - limit reached but passed validation (user_id=%d, used=%d, limit=%d)",
+            current_user.id,
+            usage_stats["used"],
+            usage_stats["limit"],
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"You've reached your monthly limit ({usage_stats['limit']} analyses/month). Your limit will reset on the 1st of next month.",
+        )
 
     # Load ICP from user or default
     if current_user.icp_config_json:
@@ -333,7 +501,12 @@ def analyze_linkedin(
             exclude_keywords=None,
         )
 
-    logger.info("Starting LinkedIn analysis for user_id=%d (plan=%s)", current_user.id, current_user.plan)
+    logger.info(
+        "AI_CALL_APPROVED: Starting LinkedIn analysis (user_id=%d, plan=%s, remaining=%d)",
+        current_user.id,
+        current_user.plan,
+        usage_stats["remaining"],
+    )
 
     try:
         fit = run_fit(profile, icp_config)
