@@ -230,7 +230,7 @@ export default function Home() {
             
             <div className="text-center">
               <p className="text-lg text-gray-600 mb-6">
-                Start with the free preview. Upgrade when you're ready for AI-powered insights.
+                Start with the free preview. Upgrade when you&apos;re ready for AI-powered insights.
               </p>
               <Button 
                 variant="primary" 
