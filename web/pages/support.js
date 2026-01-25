@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import Button from '../components/Button';
+import Link from 'next/link';
 
 export default function Support() {
   return (
@@ -135,7 +135,7 @@ export default function Support() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">What data do you collect?</h4>
                   <p className="text-gray-700">
-                    We only collect data when you click &quot;Analyze&quot; on a LinkedIn profile. This includes publicly visible profile information (name, headline, job titles, about section). See our <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a> for full details.
+                    We only collect data when you click &quot;Analyze&quot; on a LinkedIn profile. This includes publicly visible profile information (name, headline, job titles, about section). See our <Link href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link> for full details.
                   </p>
                 </div>
 

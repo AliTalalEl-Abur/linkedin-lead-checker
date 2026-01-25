@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import Link from 'next/link';
 
 export default function TermsOfService() {
   return (
@@ -81,7 +82,7 @@ export default function TermsOfService() {
             <section className="mb-8">
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">6. Data and Privacy</h2>
               <p className="text-gray-700">
-                Your use of the Service is governed by our <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a>. By using the Service, you consent to our collection and use of data as described in the Privacy Policy.
+                Your use of the Service is governed by our <Link href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</Link>. By using the Service, you consent to our collection and use of data as described in the Privacy Policy.
               </p>
             </section>
 

@@ -29,7 +29,7 @@ export async function trackEvent(
     }).catch(() => {
       // Silently fail - tracking should never break UX
     });
-  } catch (error) {
+  } catch {
     // Silently fail - tracking should never break UX
   }
 }
