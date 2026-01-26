@@ -60,7 +60,7 @@ export default function TermsOfService() {
               <ul className="list-disc pl-6 text-gray-700 space-y-2">
                 <li>Starter: $9/month - 40 AI analyses per month</li>
                 <li>Pro: $19/month - 150 AI analyses per month</li>
-                <li>Business: $49/month - 500 AI analyses per month</li>
+                <li>Team: $49/month - 500 AI analyses per month</li>
               </ul>
               <p className="text-gray-700 mt-3">
                 Subscriptions automatically renew monthly unless canceled. You can cancel anytime from your dashboard.

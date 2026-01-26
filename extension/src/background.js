@@ -4,15 +4,19 @@
  * Main API communication happens in popup.js
  */
 
-// Log when extension is installed or updated
-chrome.runtime.onInstalled.addListener(() => {
-  console.log("LinkedIn Lead Checker extension installed/updated");
+// Open welcome page on first install
+chrome.runtime.onInstalled.addListener((details) => {
+  // Open welcome page only on first install (not on updates)
+  if (details.reason === 'install') {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('welcome.html')
+    });
+  }
 });
 
 // Listen for messages from popup or content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "log") {
-    console.log("[LinkedIn Lead Checker]", request.message);
     sendResponse({ success: true });
   }
 });

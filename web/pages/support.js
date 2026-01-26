@@ -100,7 +100,7 @@ export default function Support() {
                   <ul className="text-gray-700 list-disc pl-6 space-y-1">
                     <li>Starter: $9/month - 40 AI analyses</li>
                     <li>Pro: $19/month - 150 AI analyses</li>
-                    <li>Business: $49/month - 500 AI analyses</li>
+                    <li>Team: $49/month - 500 AI analyses</li>
                   </ul>
                 </div>
 

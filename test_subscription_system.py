@@ -30,7 +30,7 @@ def test_subscription_system():
         test_cases = [
             ("starter", settings.usage_limit_starter, "$9/mes - 40 análisis/mes"),
             ("pro", settings.usage_limit_pro, "$19/mes - 150 análisis/mes"),
-            ("business", settings.usage_limit_business, "$49/mes - 500 análisis/mes"),
+            ("team", settings.usage_limit_team, "$49/mes - 500 análisis/mes"),
         ]
         
         month_key = get_current_month_key()

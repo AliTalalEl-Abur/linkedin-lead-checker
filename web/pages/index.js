@@ -17,6 +17,7 @@ const META = {
 export default function Home() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [softLaunchMode, setSoftLaunchMode] = useState(false);
   const [userState, setUserState] = useState({
     loading: true,
     isAuthenticated: false,
@@ -36,7 +37,7 @@ export default function Home() {
 
       try {
         const data = await authenticatedFetch('/user', { method: 'GET' });
-        const hasActivePlan = data.plan && ['starter', 'pro', 'business'].includes(data.plan);
+        const hasActivePlan = data.plan && ['starter', 'pro', 'team'].includes(data.plan);
         
         setUserState({
           loading: false,
@@ -50,7 +51,18 @@ export default function Home() {
       }
     };
 
+    const checkSoftLaunch = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/health`);
+        const data = await response.json();
+        setSoftLaunchMode(data.soft_launch_mode || false);
+      } catch (error) {
+        // Silent fail - soft launch check is optional
+      }
+    };
+
     checkAuthStatus();
+    checkSoftLaunch();
   }, []);
 
   const handleEarlyAccess = (e) => {
@@ -59,8 +71,6 @@ export default function Home() {
     if (email && email.includes('@')) {
       trackEvent('waitlist_join', 'landing');
       setSubmitted(true);
-      // In production, this would send to your email collection service
-      console.log('Early access email:', email);
     }
   };
 
@@ -158,9 +168,41 @@ export default function Home() {
       </Head>
 
       <main className="bg-white">
+        {/* EARLY ACCESS BADGE */}
+        {softLaunchMode && (
+          <div style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            fontWeight: 'bold',
+            fontSize: '14px',
+            zIndex: 1000,
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+          }}>
+            🚀 Early Access
+          </div>
+        )}
+
         {/* HERO SECTION */}
         <Section className="pt-20 md:pt-32 pb-16 md:pb-24" background="gray">
-          <div className="text-center">
+          <div className="text-center">{softLaunchMode && (
+              <div style={{
+                background: 'rgba(102, 126, 234, 0.1)',
+                border: '1px solid rgba(102, 126, 234, 0.3)',
+                borderRadius: '8px',
+                padding: '12px 20px',
+                marginBottom: '24px',
+                display: 'inline-block'
+              }}>
+                <span style={{ fontSize: '16px' }}>
+                  ✨ You're among the first! Help us improve with your feedback.
+                </span>
+              </div>
+            )}
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
               Instantly Know If a LinkedIn Profile<br />Is Worth Contacting
             </h1>
@@ -474,7 +516,7 @@ export default function Home() {
             />
             
             <PricingCard
-              title="Business"
+              title="Team"
               price="49"
               period="month"
               description="Ideal for teams & agencies"
@@ -485,8 +527,8 @@ export default function Home() {
                 'Dedicated support',
                 'Custom integrations'
               ]}
-              cta={getPricingCTA('business').text}
-              ctaOnClick={getPricingCTA('business').onClick}
+              cta={getPricingCTA('team').text}
+              ctaOnClick={getPricingCTA('team').onClick}
             />
           </div>
 

@@ -15,6 +15,26 @@ from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
+# Track if AI has been activated (first subscriber)
+_ai_activation_logged = False
+
+
+def _log_ai_activation_if_first(db: Session, subscriber_count: int) -> None:
+    """
+    Log when AI activates for the FIRST TIME (first paying subscriber).
+    This is a critical business event: we can now start using OpenAI.
+    """
+    global _ai_activation_logged
+    
+    if not _ai_activation_logged and subscriber_count > 0:
+        _ai_activation_logged = True
+        logger.warning(
+            "🚀🚀🚀 AI COMMERCIALLY ACTIVATED! 🚀🚀🚀 | "
+            "subscribers=%d | OpenAI API calls NOW ENABLED | "
+            "We have REVENUE - safe to pay OpenAI costs",
+            subscriber_count
+        )
+
 
 @dataclass
 class BudgetStatus:
@@ -34,11 +54,11 @@ def _current_month_window() -> Tuple[datetime, datetime]:
 
 
 def get_active_subscriber_counts(db: Session) -> Tuple[int, int, int]:
-    """Count active paid subscribers by plan (starter/pro/business)."""
+    """Count active paid subscribers by plan (starter/pro/team)."""
     starter_count = db.query(func.count(User.id)).filter(User.plan == "starter").scalar() or 0
     pro_count = db.query(func.count(User.id)).filter(User.plan == "pro").scalar() or 0
-    business_count = db.query(func.count(User.id)).filter(User.plan == "business").scalar() or 0
-    return int(starter_count), int(pro_count), int(business_count)
+    team_count = db.query(func.count(User.id)).filter(User.plan == "team").scalar() or 0
+    return int(starter_count), int(pro_count), int(team_count)
 
 
 def get_monthly_ai_spend(db: Session) -> float:
@@ -59,15 +79,35 @@ def evaluate_budget_status(db: Session) -> BudgetStatus:
     """
     Compute global budget availability based on active subscribers and spend.
 
+    COMMERCIAL ACTIVATION SYSTEM:
+    - OpenAI only activates if OPENAI_ENABLED=true AND at least 1 active subscriber
+    - If OPENAI_ENABLED=false -> returns "openai_disabled"
+    - If no active subscribers -> returns "no_subscribers" (AI launching soon)
+    - If budget exhausted -> returns "exhausted" (CRITICAL)
+    
+    This ensures we NEVER PAY OPENAI BEFORE WE HAVE REVENUE.
+
     GLOBAL_MONTHLY_AI_BUDGET = (active_starter_users * revenue_per_starter_user) +
                                (active_pro_users * revenue_per_pro_user) +
-                               (active_business_users * revenue_per_business_user)
-    - If no active paid users -> force preview (no OpenAI)
-    - If budget <= 0 -> OpenAI disabled
-    - If spend >= budget -> OpenAI disabled (CRITICAL)
+                               (active_team_users * revenue_per_team_user)
     """
     settings = get_settings()
+    
+    # CRITICAL: Check if OpenAI is globally enabled first
+    if not settings.openai_enabled:
+        logger.info("AI_DISABLED: OPENAI_ENABLED=false - OpenAI calls blocked globally")
+        return BudgetStatus(
+            budget=0.0,
+            spend=0.0,
+            active_pro_users=0,
+            active_team_users=0,
+            allowed=False,
+            reason="openai_disabled",
+        )
+    
     active_starter, active_pro, active_business = get_active_subscriber_counts(db)
+    total_subscribers = active_starter + active_pro + active_business
+    
     budget = (
         (active_starter * settings.revenue_per_starter_user) +
         (active_pro * settings.revenue_per_pro_user) +
@@ -75,7 +115,14 @@ def evaluate_budget_status(db: Session) -> BudgetStatus:
     )
     spend = get_monthly_ai_spend(db)
 
-    if active_starter == 0 and active_pro == 0 and active_business == 0:
+    # Check for first activation (0 -> 1+ subscribers)
+    if total_subscribers > 0:
+        _log_ai_activation_if_first(db, total_subscribers)
+
+    if total_subscribers == 0:
+        logger.info(
+            "AI_NOT_ACTIVATED: No active subscribers yet (OPENAI_ENABLED=true but no revenue)"
+        )
         return BudgetStatus(
             budget=budget,
             spend=spend,
@@ -173,9 +220,9 @@ def check_usage_limit(user: User, db: Session) -> None:
     elif user.plan == "pro":
         limit = settings.usage_limit_pro
         limit_label = "PRO"
-    elif user.plan == "business":
-        limit = settings.usage_limit_business
-        limit_label = "BUSINESS"
+    elif user.plan == "team":
+        limit = settings.usage_limit_team
+        limit_label = "TEAM"
     else:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
@@ -239,7 +286,7 @@ def record_usage(
     """
     Record a usage event after successful analysis.
 
-    - Creates UsageEvent with month_key for monthly tracking (STARTER/PRO/BUSINESS)
+    - Creates UsageEvent with month_key for monthly tracking (STARTER/PRO/TEAM)
     - Updates User.last_analysis_at for rate limiting
     - Associates cost for budget accounting
 
@@ -305,8 +352,8 @@ def get_usage_stats(user: User, db: Session) -> dict:
         limit = settings.usage_limit_starter
     elif user.plan == "pro":
         limit = settings.usage_limit_pro
-    elif user.plan == "business":
-        limit = settings.usage_limit_business
+    elif user.plan == "team":
+        limit = settings.usage_limit_team
     else:
         limit = 0
     

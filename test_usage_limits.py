@@ -319,7 +319,7 @@ def test_all_plan_limits(db_session):
     plans = [
         ("starter", 40),
         ("pro", 150),
-        ("business", 500)
+        ("team", 500)
     ]
     
     month_key = datetime.now().strftime("%Y-%m")

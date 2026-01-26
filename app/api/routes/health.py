@@ -19,4 +19,9 @@ def healthcheck():
     Always returns 200 OK if the app is serving requests.
     """
     settings = get_settings()
-    return {"ok": True, "env": settings.env}
+    return {
+        "ok": True,
+        "env": settings.env,
+        "soft_launch_mode": settings.soft_launch_mode,
+        "daily_registration_limit": settings.daily_registration_limit if settings.soft_launch_mode else None
+    }

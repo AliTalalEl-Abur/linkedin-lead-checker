@@ -1,16 +1,34 @@
-# LinkedIn Lead Checker — OpenAI JSON Client Demo
+# LinkedIn Lead Checker
 
-This repo includes a JSON-only OpenAI client for lead fit scoring and decision writing.
+AI-powered LinkedIn profile analysis tool to help you identify and qualify leads faster.
 
-Functions:
-- `run_fit(profile, icp)`: returns `FitScoringResult`
-- `run_decision(qualification, profile=None)`: returns `DecisionResult`
+## Features
+- AI-powered profile fit scoring
+- Smart lead qualification
+- Multiple subscription tiers (Free, Starter, Pro, Business)
+- Chrome extension + Web dashboard
+- **Commercial AI Activation**: OpenAI only activates when you have paying subscribers
 
-Key behaviors:
-- Uses cheap model `gpt-4o-mini` with low temperature
-- Forces `response_format=json_object` to ensure JSON-only
-- Parses JSON and fails if invalid (raises `ValueError`)
-- Falls back to mock mode when `OPENAI_API_KEY` is not set
+## Commercial AI Activation 💰
+
+This system ensures **you never pay OpenAI before having revenue**:
+- ✅ AI activates ONLY with `OPENAI_ENABLED=true` + 1+ active subscribers
+- ✅ Before first subscriber: Shows "AI launching soon"
+- ✅ First activation: Clear log message 🚀
+- ✅ Budget auto-calculated from subscriber revenue
+
+📚 **Quick Guide:** [AI_ACTIVATION_QUICKSTART.md](AI_ACTIVATION_QUICKSTART.md)  
+📖 **Full Docs:** [AI_COMMERCIAL_ACTIVATION.md](AI_COMMERCIAL_ACTIVATION.md)
+
+## Key Components
+- `run_fit(profile, icp)`: Returns `FitScoringResult`
+- `run_decision(qualification, profile)`: Returns `DecisionResult`
+
+## Tech Stack
+- Backend: FastAPI + SQLite
+- AI: OpenAI GPT-4o-mini with structured JSON responses
+- Payments: Stripe subscriptions
+- Frontend: Chrome Extension + Next.js web app
 
 ## Quick Start
 
@@ -51,6 +69,25 @@ decision = run_decision(fit, profile)
 print(fit.model_dump())
 print(decision.model_dump())
 ```
+
+## Privacy-Respecting Tracking
+
+This project includes a minimal, privacy-first tracking system:
+- ✅ Only tracks 2 events: Install Extension clicks & Waitlist joins
+- ✅ No cookies, no Google Analytics, no persistent user IDs
+- ✅ Fire-and-forget (doesn't block UI)
+- ✅ IP partially masked, GDPR compliant
+
+**Quick Start:**
+```powershell
+# Test tracking
+./test_tracking.ps1
+
+# Analyze events
+python analyze_tracking.py
+```
+
+📚 **Full Documentation:** [TRACKING_INDEX.md](TRACKING_INDEX.md)
 
 ## Notes
 - In mock mode (no API key), results are deterministic and suited for local tests.

@@ -8,6 +8,11 @@
   </head>
   <body>
     <div class="container">
+      <!-- EARLY ACCESS BADGE -->
+      <div class="early-access-badge">
+        🚀 Early Access
+      </div>
+
       <!-- LOGIN FORM SECTION -->
       <div id="loginForm" class="form-container">
         <div class="header">
@@ -65,8 +70,8 @@
         <!-- RESULTS CONTAINER -->
         <div id="resultsContainer" class="results-container" style="display: none">
           <div class="results-header">
-            <h2>Preview Analysis</h2>
-            <p class="results-subtitle">This is a preview. Full AI analysis requires a subscription.</p>
+            <h2>Profile Analysis</h2>
+            <p class="results-subtitle">Upgrade to unlock full AI-powered insights.</p>
           </div>
 
           <div class="fit-score-section">
@@ -75,7 +80,7 @@
           </div>
 
           <div class="insights-section">
-            <h3>Generic Insights</h3>
+            <h3>Quick Insights</h3>
             <ul id="insightsList" class="insights-list"></ul>
           </div>
 
@@ -93,6 +98,37 @@
         <button id="logoutButton" class="btn btn-secondary" style="margin-top: 12px">
           Logout
         </button>
+
+        <!-- FEEDBACK SECTION -->
+        <div id="feedbackSection" class="feedback-section" style="display: none">
+          <h3>Share Your Feedback</h3>
+          <p class="feedback-subtitle">Help us improve! What do you think?</p>
+          <textarea 
+            id="feedbackTextarea" 
+            placeholder="Share your experience, suggestions, or report any issues..."
+            maxlength="2000"
+          ></textarea>
+          <div class="feedback-actions">
+            <button id="submitFeedbackButton" class="btn btn-primary">
+              Send Feedback
+            </button>
+            <button id="cancelFeedbackButton" class="btn btn-link">
+              Cancel
+            </button>
+          </div>
+          <div id="feedbackStatus" class="status"></div>
+        </div>
+
+        <button id="showFeedbackButton" class="btn btn-link" style="margin-top: 12px">
+          💬 Give Feedback
+        </button>
+      </div>
+
+      <!-- FOOTER LINKS -->
+      <div class="extension-footer">
+        <a href="https://linkedinleadchecker.com/privacy-policy.html" target="_blank">Privacy</a>
+        <span>•</span>
+        <a href="https://linkedinleadchecker.com/terms-of-service.html" target="_blank">Terms</a>
       </div>
 
       <!-- LIMIT REACHED MODAL -->

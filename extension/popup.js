@@ -1,11 +1,7 @@
 /**
- * Popup Script: Authentication Flow
- * - Login with email/password
- * - Store token securely in chrome.storage.local
- * - Persist login state on popup load
+ * LinkedIn Lead Checker - Popup Script
+ * Authentication and profile analysis functionality
  */
-
-console.log("popup.js loaded - Extension initializing");
 
 const API_CONFIG = {
   baseUrl: "https://linkedin-lead-checker-api.onrender.com",
@@ -33,6 +29,12 @@ const limitModal = document.getElementById("limitModal");
 const upgradePlanButton = document.getElementById("upgradePlanButton");
 const viewUsageButton = document.getElementById("viewUsageButton");
 const closeModalButton = document.getElementById("closeModalButton");
+const showFeedbackButton = document.getElementById("showFeedbackButton");
+const feedbackSection = document.getElementById("feedbackSection");
+const feedbackTextarea = document.getElementById("feedbackTextarea");
+const submitFeedbackButton = document.getElementById("submitFeedbackButton");
+const cancelFeedbackButton = document.getElementById("cancelFeedbackButton");
+const feedbackStatus = document.getElementById("feedbackStatus");
 
 // Initialize on popup load
 document.addEventListener("DOMContentLoaded", () => {
@@ -84,6 +86,9 @@ function setupEventListeners() {
   upgradePlanButton.addEventListener("click", handleUpgrade);
   viewUsageButton.addEventListener("click", handleViewUsage);
   closeModalButton.addEventListener("click", closeLimitModal);
+  showFeedbackButton.addEventListener("click", showFeedbackSection);
+  submitFeedbackButton.addEventListener("click", handleSubmitFeedback);
+  cancelFeedbackButton.addEventListener("click", hideFeedbackSection);
 }
 
 /**
@@ -120,6 +125,14 @@ async function handleLogin(e) {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      
+      // Check for soft launch limit reached
+      if (response.status === 429 && errorData.detail?.limit_reached) {
+        showStatus(errorData.detail.message || "Registration limit reached. Please try again tomorrow.", "error");
+        setLoading(false);
+        return;
+      }
+      
       const errorMessage =
         errorData.detail || "Login failed. Please try again.";
       showStatus(errorMessage, "error");
@@ -425,6 +438,97 @@ function handleViewUsage() {
       closeLimitModal();
     });
   });
+}
+
+/**
+ * Show feedback section
+ */
+function showFeedbackSection() {
+  feedbackSection.style.display = "block";
+  showFeedbackButton.style.display = "none";
+  feedbackTextarea.value = "";
+  feedbackTextarea.focus();
+}
+
+/**
+ * Hide feedback section
+ */
+function hideFeedbackSection() {
+  feedbackSection.style.display = "none";
+  showFeedbackButton.style.display = "block";
+  clearFeedbackStatus();
+}
+
+/**
+ * Handle submit feedback
+ */
+async function handleSubmitFeedback() {
+  const message = feedbackTextarea.value.trim();
+  
+  if (!message || message.length < 5) {
+    showFeedbackStatus("Please write at least 5 characters", "error");
+    return;
+  }
+
+  chrome.storage.local.get(['access_token'], async (result) => {
+    if (!result.access_token) {
+      showFeedbackStatus("Please login first", "error");
+      return;
+    }
+
+    try {
+      submitFeedbackButton.disabled = true;
+      submitFeedbackButton.textContent = "Sending...";
+      
+      const response = await fetch(
+        `${API_CONFIG.baseUrl}/feedback/`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${result.access_token}`
+          },
+          body: JSON.stringify({ message })
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to submit feedback");
+      }
+
+      const data = await response.json();
+      showFeedbackStatus(data.message || "Thank you for your feedback!", "success");
+      feedbackTextarea.value = "";
+      
+      // Hide feedback section after 2 seconds
+      setTimeout(() => {
+        hideFeedbackSection();
+      }, 2000);
+      
+    } catch (error) {
+      console.error("Feedback error:", error);
+      showFeedbackStatus("Failed to send feedback. Please try again.", "error");
+    } finally {
+      submitFeedbackButton.disabled = false;
+      submitFeedbackButton.textContent = "Send Feedback";
+    }
+  });
+}
+
+/**
+ * Show feedback status message
+ */
+function showFeedbackStatus(message, type) {
+  feedbackStatus.textContent = message;
+  feedbackStatus.className = `status visible ${type}`;
+}
+
+/**
+ * Clear feedback status message
+ */
+function clearFeedbackStatus() {
+  feedbackStatus.textContent = "";
+  feedbackStatus.className = "status";
 }
 
 // Initialize on popup load

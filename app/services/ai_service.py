@@ -297,8 +297,6 @@ def _run_chat_json(client: Optional[object], messages: list, model: str = "gpt-4
     
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            logger.debug("OpenAI API call attempt %d/%d (model=%s)", attempt, MAX_RETRIES, model)
-            
             completion = client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -309,8 +307,6 @@ def _run_chat_json(client: Optional[object], messages: list, model: str = "gpt-4
             content = completion.choices[0].message.content
             if not content:
                 raise ValueError("OpenAI returned empty response")
-            
-            logger.debug("OpenAI response received (length=%d chars)", len(content))
             
             try:
                 parsed = json.loads(content)

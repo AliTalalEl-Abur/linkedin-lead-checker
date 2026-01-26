@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Preview LinkedIn profile fit before reaching out. Free basic info, full AI analysis with subscription.",
   "author": "LinkedIn Lead Checker",
+  "homepage_url": "https://linkedinleadchecker.com",
   "permissions": [
     "activeTab",
     "storage"
@@ -13,7 +14,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "LinkedIn Lead Checker - Preview lead fit"
+    "default_title": "LinkedIn Lead Checker"
   },
   "background": {
     "service_worker": "src/background.js"

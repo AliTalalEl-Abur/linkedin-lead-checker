@@ -145,7 +145,7 @@ def test_subscription_updated_downgrade():
     
     print(f"Final state: {user.plan}")
     assert user.plan == "pro", "Plan should be downgraded to pro"
-    print("✅ PASSED: User downgraded from Business to Pro")
+    print("✅ PASSED: User downgraded from Team to Pro")
 
 
 def test_subscription_deleted():
@@ -187,8 +187,8 @@ def test_all_plan_transitions():
     transitions = [
         ("free", "starter"),
         ("starter", "pro"),
-        ("pro", "business"),
-        ("business", "pro"),
+        ("pro", "team"),
+        ("team", "pro"),
         ("pro", "starter"),
         ("starter", "free"),
     ]
@@ -232,7 +232,7 @@ if __name__ == "__main__":
         print("   • free (default)")
         print("   • starter ($9/month - 40 analyses)")
         print("   • pro ($19/month - 150 analyses)")
-        print("   • business ($49/month - 500 analyses)")
+        print("   • team ($49/month - 500 analyses)")
         
         print("\n🔗 Webhook Configuration:")
         print("   Endpoint: https://your-domain.com/billing/webhook/stripe")

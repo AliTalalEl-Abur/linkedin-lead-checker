@@ -46,7 +46,7 @@ def verify_configuration():
     print("\n💰 REVENUE POR PLAN:")
     print(f"  ├─ STARTER:  ${settings.revenue_per_starter_user}/mes")
     print(f"  ├─ PRO:      ${settings.revenue_per_pro_user}/mes")
-    print(f"  └─ BUSINESS: ${settings.revenue_per_business_user}/mes")
+    print(f"  └─ TEAM: ${settings.revenue_per_team_user}/mes")
     
     # Check Stripe config
     print("\n🔐 CONFIGURACIÓN STRIPE:")
@@ -54,13 +54,13 @@ def verify_configuration():
     has_webhook = bool(settings.stripe_webhook_secret)
     has_starter = bool(settings.stripe_price_starter_id)
     has_pro = bool(settings.stripe_price_pro_id)
-    has_business = bool(settings.stripe_price_business_id)
+    has_team = bool(settings.stripe_price_team_id)
     
     print(f"  ├─ API Key:          {'✅' if has_api_key else '⚠️  (no configurada)'}")
     print(f"  ├─ Webhook Secret:   {'✅' if has_webhook else '⚠️  (no configurado)'}")
     print(f"  ├─ Starter Price ID: {'✅' if has_starter else '⚠️  (no configurado)'}")
     print(f"  ├─ Pro Price ID:     {'✅' if has_pro else '⚠️  (no configurado)'}")
-    print(f"  └─ Business Price ID:{'✅' if has_business else '⚠️  (no configurado)'}")
+    print(f"  └─ Team Price ID:{'✅' if has_team else '⚠️  (no configurado)'}")
     
     if not (has_api_key and has_webhook):
         print("\n  ⚠️  Nota: Stripe no está completamente configurado.")
@@ -88,7 +88,7 @@ def verify_configuration():
         print("\n🎯 RESUMEN:")
         print("  • Límites mensuales configurados correctamente")
         print("  • Sistema de tracking mensual activo")
-        print("  • 3 planes pagos: Starter ($9), Pro ($19), Business ($49)")
+        print("  • 3 planes pagos: Starter ($9), Pro ($19), Team ($49)")
         print("  • Límites DUROS (sin rollover)")
         print("\n📝 PRÓXIMOS PASOS:")
         print("  1. Ejecutar migración: python migrations/add_month_key_to_usage_events.py")

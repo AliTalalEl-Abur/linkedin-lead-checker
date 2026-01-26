@@ -29,14 +29,16 @@ from app.services import get_ai_service, run_fit, run_decision
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/analyze", tags=["analyze"])
 
-FREE_COPY = "This is a preview. Full AI analysis requires a subscription."
-PRO_COPY = "Unlimited lead checks (fair use). Real AI-powered analysis."
-NO_BUDGET_COPY = "Real-time analysis temporarily unavailable. Upgrade to unlock."
-PREVIEW_BANNER = "Preview Analysis"
-PREVIEW_MESSAGE = "This is a preview. Full AI analysis requires a subscription."
+FREE_COPY = "Upgrade to unlock full AI-powered analysis."
+PRO_COPY = "AI-powered profile analysis for smarter outreach."
+NO_BUDGET_COPY = "Analysis temporarily unavailable. Upgrade to unlock."
+AI_LAUNCHING_SOON = "AI analysis launching soon. Be among the first!"
+FREE_BANNER = "Quick Analysis"
+FREE_MESSAGE = "Upgrade to unlock full AI-powered insights."
+AI_SOON_MESSAGE = "Full AI analysis coming soon - join the waitlist!"
 
-# Generic preview insights that are useful but clearly limited
-PREVIEW_INSIGHTS = [
+# Free tier insights - valuable but limited
+FREE_INSIGHTS = [
     "Profile shows professional experience relevant to B2B outreach",
     "Active LinkedIn presence with industry connections",
     "Career progression indicates decision-making authority",
@@ -47,7 +49,7 @@ PREVIEW_INSIGHTS = [
 
 
 def _extract_identity(profile_data: dict) -> Tuple[str, str]:
-    """Return best-effort (name, headline) tuple for preview copy."""
+    """Extract name and headline from profile data."""
     name = (
         profile_data.get("name")
         or profile_data.get("full_name")
@@ -72,7 +74,7 @@ def _extract_identity(profile_data: dict) -> Tuple[str, str]:
 
 
 def _determine_preview(user: User, budget_status: BudgetStatus, db: Session) -> Tuple[bool, str | None]:
-    """Apply fundamental gating rules to decide preview vs real analysis."""
+    """Determine if user gets free tier or full AI analysis."""
     # CRITICAL: Check OPENAI_ENABLED first
     settings = get_settings()
     if not settings.openai_enabled:
@@ -94,7 +96,16 @@ def _determine_preview(user: User, budget_status: BudgetStatus, db: Session) -> 
             detail=NO_BUDGET_COPY,
         )
 
-    if budget_status.reason in {"no_subscribers", "no_budget"}:
+    # Commercial activation: no subscribers yet (AI not active)
+    if budget_status.reason == "no_subscribers":
+        logger.info(
+            "AI_LAUNCHING_SOON: No subscribers yet - showing preview (user_id=%d, plan=%s)",
+            user.id,
+            user.plan,
+        )
+        return True, "no_subscribers"
+
+    if budget_status.reason == "no_budget":
         if user.plan in {"pro", "team", "starter", "business"}:
             logger.warning(
                 "User attempted real analysis without budget (user_id=%d, plan=%s, reason=%s)",
@@ -157,8 +168,8 @@ def _serve_cached_linkedin(db: Session, profile_hash: str) -> AnalyzeLinkedInRes
     return AnalyzeLinkedInResponse(**cached)
 
 
-def _preview_profile_response(profile_data: dict, user: User, db: Session) -> AnalyzeProfileResponse:
-    """Generate useful but limited preview response that doesn't consume AI analysis."""
+def _free_tier_profile_response(profile_data: dict, user: User, db: Session, preview_reason: str | None = None) -> AnalyzeProfileResponse:
+    """Generate free tier response without consuming AI credits."""
     import random
     
     usage_stats = get_usage_stats(user, db)
@@ -167,16 +178,28 @@ def _preview_profile_response(profile_data: dict, user: User, db: Session) -> An
     # Generate consistent but varied score (60-80 range)
     score = 65.0 + (hash(str(profile_data)) % 16)  # 65-80
     
-    # Select 3 generic insights
-    selected_insights = random.sample(PREVIEW_INSIGHTS, min(3, len(PREVIEW_INSIGHTS)))
+    # Select 3 insights
+    selected_insights = random.sample(FREE_INSIGHTS, min(3, len(FREE_INSIGHTS)))
     insights_text = "\n".join([f"• {insight}" for insight in selected_insights])
     
-    reasoning = f"{PREVIEW_BANNER}\n\n{insights_text}\n\n💡 {PREVIEW_MESSAGE}\n\nLead: {name} | {headline}"
+    # Determine banner and message based on preview reason
+    banner = FREE_BANNER
+    message = FREE_MESSAGE
+    
+    if preview_reason == "no_subscribers":
+        banner = "Preview Mode"
+        message = AI_SOON_MESSAGE
+    elif preview_reason == "openai_disabled":
+        banner = "Preview Mode"
+        message = AI_LAUNCHING_SOON
+    
+    reasoning = f"{banner}\n\n{insights_text}\n\n💡 {message}\n\nLead: {name} | {headline}"
     
     logger.info(
-        "Preview response generated (NO AI call, NO usage recorded): user_id=%d, plan=%s",
+        "Free tier response generated (no AI call): user_id=%d, plan=%s, reason=%s",
         user.id,
-        user.plan
+        user.plan,
+        preview_reason or "free_plan"
     )
     
     return AnalyzeProfileResponse(
@@ -185,12 +208,12 @@ def _preview_profile_response(profile_data: dict, user: User, db: Session) -> An
         reasoning=reasoning,
         usage_remaining=usage_stats["remaining"],
         preview=True,
-        message=PREVIEW_MESSAGE,
+        message=message,
     )
 
 
-def _preview_linkedin_response(profile: dict, user: User, message: str) -> AnalyzeLinkedInResponse:
-    """Generate useful but limited LinkedIn preview that doesn't consume AI analysis."""
+def _preview_linkedin_response(profile: dict, user: User, message: str, preview_reason: str | None = None) -> AnalyzeLinkedInResponse:
+    """Generate free tier LinkedIn response without consuming AI credits."""
     import random
     
     name, headline = _extract_identity(profile)
@@ -198,13 +221,19 @@ def _preview_linkedin_response(profile: dict, user: User, message: str) -> Analy
     # Generate consistent but varied score (60-80 range)
     base_score = 65.0 + (hash(str(profile)) % 16)  # 65-80
     
-    # Select 3 random generic insights
-    selected_insights = random.sample(PREVIEW_INSIGHTS, min(3, len(PREVIEW_INSIGHTS)))
+    # Select 3 insights
+    selected_insights = random.sample(FREE_INSIGHTS, min(3, len(FREE_INSIGHTS)))
+    
+    # Determine banner based on preview reason
+    banner = FREE_BANNER
+    if preview_reason in ["no_subscribers", "openai_disabled"]:
+        banner = "Preview Mode - AI Launching Soon"
     
     logger.info(
-        "LinkedIn preview generated (NO AI call, NO usage recorded): user_id=%d, plan=%s",
+        "LinkedIn free tier response generated (no AI call): user_id=%d, plan=%s, reason=%s",
         user.id,
-        user.plan
+        user.plan,
+        preview_reason or "free_plan"
     )
     
     qualification = FitScoringResult(
@@ -218,7 +247,7 @@ def _preview_linkedin_response(profile: dict, user: User, message: str) -> Analy
             engagement_level=base_score - 10.0,
         ),
         positive_signals=selected_insights,
-        negative_signals=["⚠️ Preview mode - upgrade for full AI analysis"],
+        negative_signals=["⚠️ Upgrade for full AI-powered analysis"],
         data_quality=70.0,
         confidence=50.0,
     )
@@ -227,11 +256,11 @@ def _preview_linkedin_response(profile: dict, user: User, message: str) -> Analy
         should_contact=True,
         priority="medium",
         score=base_score,
-        reasoning=f"{PREVIEW_BANNER}\\n\\n💡 {PREVIEW_MESSAGE}\\n\\nLead: {name} | {headline}",
+        reasoning=f"{banner}\\n\\n💡 {message}\\n\\nLead: {name} | {headline}",
         key_points=selected_insights,
-        suggested_approach="🔓 Unlock full AI analysis to get personalized outreach recommendations.",
-        red_flags=["This is preview data - not personalized AI analysis"],
-        next_steps="Subscribe to unlock full AI-powered lead analysis with personalized insights.",
+        suggested_approach="🔓 Unlock full AI analysis for personalized outreach recommendations.",
+        red_flags=["Upgrade for personalized AI-powered insights"],
+        next_steps="Subscribe to unlock full AI-powered lead analysis.",
     )
     
     return AnalyzeLinkedInResponse(
@@ -301,7 +330,7 @@ def analyze_profile(
                 current_user.plan,
                 preview_reason,
             )
-        return _preview_profile_response(profile_data, current_user, db)
+        return _free_tier_profile_response(profile_data, current_user, db, preview_reason)
 
     profile_hash = build_profile_hash(profile_data)
     cached_response = _serve_cached_profile(db, profile_hash)
@@ -442,6 +471,13 @@ def analyze_linkedin(
                 preview_reason,
             )
             preview_message = FREE_COPY
+        elif preview_reason == "no_subscribers":
+            logger.info(
+                "AI_LAUNCHING_SOON: No active subscribers yet - showing preview (user_id=%d, plan=%s)",
+                current_user.id,
+                current_user.plan,
+            )
+            preview_message = AI_SOON_MESSAGE
         else:
             logger.info(
                 "Preview Mode activated for LinkedIn endpoint (user_id=%d, plan=%s, reason=%s)",
@@ -449,8 +485,8 @@ def analyze_linkedin(
                 current_user.plan,
                 preview_reason,
             )
-            preview_message = NO_BUDGET_COPY if preview_reason in {"no_subscribers", "no_budget"} else FREE_COPY
-        return _preview_linkedin_response(profile, current_user, preview_message)
+            preview_message = NO_BUDGET_COPY if preview_reason == "no_budget" else FREE_COPY
+        return _preview_linkedin_response(profile, current_user, preview_message, preview_reason)
 
     profile_hash = build_profile_hash(profile)
     cached_response = _serve_cached_linkedin(db, profile_hash)

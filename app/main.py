@@ -7,6 +7,7 @@ from app.api.routes.analyze import router as analyze_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.billing import router as billing_router
 from app.api.routes.events import router as events_router
+from app.api.routes.feedback import router as feedback_router
 from app.api.routes.health import router as health_router
 from app.api.routes.user import router as user_router
 from app.core.config import get_settings
@@ -34,7 +35,7 @@ def create_app() -> FastAPI:
     # Log optional service status
     _log_service_status(settings)
     
-    app = FastAPI(title="LinkedIn Lead Checker API", version="0.1.0")
+    app = FastAPI(title="LinkedIn Lead Checker API", version="1.0.0")
 
     app.add_middleware(
         CORSMiddleware,
@@ -51,11 +52,12 @@ def create_app() -> FastAPI:
     app.include_router(analyze_router)
     app.include_router(billing_router)
     app.include_router(events_router)
+    app.include_router(feedback_router)
 
     # Ensure all models are imported before creating tables
     from app import models as _models  # noqa: F401
 
-    # MVP: create tables at startup (replace with Alembic later)
+    # Initialize database tables
     Base.metadata.create_all(bind=get_engine())
     logger.info("Database tables initialized")
     
@@ -91,8 +93,6 @@ def _validate_required_env(settings: object) -> None:
         env = getattr(settings, 'env', 'dev')
         if env == "prod":
             errors.append("JWT_SECRET_KEY must be changed in production")
-        else:
-            logger.warning("Using default JWT_SECRET_KEY (OK for dev/test only)")
     
     if errors:
         for error in errors:
@@ -116,9 +116,20 @@ def _log_service_status(settings: object) -> None:
         logger.info("openai_enabled=true")
     
     # Stripe status
-    has_stripe = bool(getattr(settings, 'stripe_api_key', None))
-    if has_stripe:
+    has_stripe_key = bool(getattr(settings, 'stripe_api_key', None))
+    has_starter_price = bool(getattr(settings, 'stripe_price_starter_id', None))
+    has_pro_price = bool(getattr(settings, 'stripe_price_pro_id', None))
+    has_team_price = bool(getattr(settings, 'stripe_price_team_id', None))
+    has_webhook_secret = bool(getattr(settings, 'stripe_webhook_secret', None))
+    
+    if has_stripe_key:
         logger.info("Stripe: ENABLED (billing available)")
+        logger.info("  - starter_price_id: %s", "configured" if has_starter_price else "missing")
+        logger.info("  - pro_price_id: %s", "configured" if has_pro_price else "missing")
+        logger.info("  - team_price_id: %s", "configured" if has_team_price else "missing")
+        logger.info("  - webhook_secret: %s", "configured" if has_webhook_secret else "missing")
+        if not (has_starter_price or has_pro_price or has_team_price):
+            logger.warning("WARNING: Stripe API key configured but no price IDs set. Checkout will fail.")
     else:
         logger.info("Stripe: DISABLED (no API key - billing unavailable)")
     
