@@ -12,12 +12,22 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     plan: Mapped[str] = mapped_column(String(20), nullable=False, default="free")
-    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    
+    # Stripe subscription details
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    subscription_status: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)  # active, canceled, past_due, etc.
+    
+    # ICP configuration
     icp_config_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     
-    # Lifetime counter for FREE plan (no reset)
+    # Usage tracking
+    # FREE: Lifetime counter (no reset)
     lifetime_analyses_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    
+    # PAID PLANS: Monthly counter (resets each billing period)
+    monthly_analyses_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    monthly_analyses_reset_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     
     # Rate limiting: timestamp of last analysis
     last_analysis_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

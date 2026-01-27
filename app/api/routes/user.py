@@ -13,12 +13,29 @@ router = APIRouter(prefix="/user", tags=["user"])
 @router.get("", summary="Get current user profile")
 def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Protected endpoint that returns the current authenticated user."""
+    from app.core.config import get_settings
+    settings = get_settings()
+    
     usage_stats = get_usage_stats(current_user, db)
+    
+    # Get monthly limit based on plan
+    plan_limits = {
+        "free": 3,  # lifetime limit
+        "starter": settings.usage_limit_starter,  # 40/month
+        "pro": settings.usage_limit_pro,          # 150/month
+        "team": settings.usage_limit_team,        # 500/month
+    }
+    
+    monthly_limit = plan_limits.get(current_user.plan, 0)
     
     return {
         "id": current_user.id,
         "email": current_user.email,
         "plan": current_user.plan,
+        "subscription_status": current_user.subscription_status,
+        "monthly_limit": monthly_limit,
+        "monthly_analyses_count": current_user.monthly_analyses_count or 0,
+        "monthly_analyses_reset_at": current_user.monthly_analyses_reset_at,
         "created_at": current_user.created_at,
         "usage": usage_stats,
         "icp_config": current_user.icp_config_json,

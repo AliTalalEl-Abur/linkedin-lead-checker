@@ -23,13 +23,23 @@ router = APIRouter(prefix="/billing", tags=["billing"])
 class CheckoutRequest(BaseModel):
     """Request to create a Stripe checkout session."""
     return_url: str  # URL to redirect after checkout (should include {CHECKOUT_SESSION_ID})
-    plan: str = "pro"  # "starter", "pro", or "business"
+    plan: str = "pro"  # "starter", "pro", or "team" - ONLY these values accepted
 
 
 class CheckoutResponse(BaseModel):
     """Response with Stripe checkout session details."""
     sessionId: str
     url: str
+
+
+class BillingStatusResponse(BaseModel):
+    """Response with user billing status."""
+    plan: str
+    usage_current: int
+    usage_limit: int
+    reset_date: str | None
+    can_analyze: bool
+    subscription_status: str | None
 
 
 def get_stripe_service() -> StripeService:
@@ -57,12 +67,19 @@ def get_stripe_service() -> StripeService:
 )
 def create_checkout_session(
     request: CheckoutRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),  # ✅ SECURITY: JWT authentication required
     db: Session = Depends(get_db),
     stripe_service: StripeService = Depends(get_stripe_service),
 ):
     """
     Create a Stripe checkout session for upgrading to paid plan.
+    
+    🔒 SECURITY FEATURES:
+    - ✅ JWT authentication required (current_user dependency)
+    - ✅ Strict plan validation (only: starter, pro, team)
+    - ✅ Price ID whitelist validation in StripeService
+    - ✅ User metadata attached to Stripe session
+    - ✅ All validation errors logged with user context
     
     Plans:
     - Starter: $9/month - 40 analyses/month
@@ -71,34 +88,79 @@ def create_checkout_session(
     
     After successful payment, a Stripe webhook will update the user's plan.
     
-    SECURITY: Only accepts configured price_ids for the three plans above.
+    BLOCKED: Any plan not in the whitelist or invalid price_id.
     """
+    # VALIDATION 1: return_url is required
     if not request.return_url:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="return_url required")
-
-    plan = request.plan.lower().strip() if request.plan else "pro"
-    if plan not in ("starter", "pro", "team"):
+        logger.warning(
+            "CHECKOUT_REJECTED | user_id=%s | reason=missing_return_url",
+            current_user.id
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="Invalid plan. Must be 'starter', 'pro', or 'team'"
+            detail="return_url is required"
+        )
+    
+    # VALIDATION 2: return_url must include {CHECKOUT_SESSION_ID} placeholder
+    if "{CHECKOUT_SESSION_ID}" not in request.return_url:
+        logger.warning(
+            "CHECKOUT_REJECTED | user_id=%s | reason=invalid_return_url | url=%s",
+            current_user.id,
+            request.return_url
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="return_url must include {CHECKOUT_SESSION_ID} placeholder"
+        )
+
+    # VALIDATION 3: Strict plan validation (whitelist only)
+    plan = request.plan.lower().strip() if request.plan else None
+    if not plan:
+        logger.warning(
+            "CHECKOUT_REJECTED | user_id=%s | reason=missing_plan",
+            current_user.id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="plan is required"
+        )
+    
+    # VALIDATION 4: Plan must be one of the allowed values
+    ALLOWED_PLANS = ("starter", "pro", "team")
+    if plan not in ALLOWED_PLANS:
+        logger.warning(
+            "CHECKOUT_REJECTED | user_id=%s | plan=%s | reason=invalid_plan | allowed=%s",
+            current_user.id,
+            plan,
+            ALLOWED_PLANS
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail=f"Invalid plan '{plan}'. Must be one of: {', '.join(ALLOWED_PLANS)}"
         )
 
     try:
+        # VALIDATION 5: StripeService validates price_id whitelist
+        # This ensures only configured price_ids from .env are used
         result = stripe_service.create_checkout_session(
-            user_id=current_user.id,
+            user_id=str(current_user.id),  # Convert to string for Stripe metadata
             email=current_user.email,
             return_url=request.return_url,
             plan=plan,
         )
+        
         logger.info(
-            "CHECKOUT_SESSION_CREATED | user_id=%s | email=%s | plan=%s | authenticated=true",
+            "CHECKOUT_SESSION_CREATED | user_id=%s | email=%s | plan=%s | session_id=%s | authenticated=true",
             current_user.id,
             current_user.email,
-            plan
+            plan,
+            result.get('sessionId', 'unknown')
         )
+        
         return CheckoutResponse(**result)
+        
     except ValueError as e:
-        # Validation errors (invalid plan, missing price_id, etc.)
+        # Validation errors (invalid plan, missing price_id, unauthorized price_id)
         logger.error(
             "CHECKOUT_SESSION_FAILED | user_id=%s | email=%s | plan=%s | error=%s | type=validation",
             current_user.id,
@@ -108,9 +170,39 @@ def create_checkout_session(
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail=f"Checkout validation failed: {str(e)}",
         )
+    
+    except stripe.error.InvalidRequestError as e:
+        # Stripe API errors (invalid price_id, configuration issues)
+        logger.error(
+            "CHECKOUT_SESSION_FAILED | user_id=%s | email=%s | plan=%s | error=%s | type=stripe_invalid",
+            current_user.id,
+            current_user.email,
+            plan,
+            str(e)
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid Stripe configuration. Please contact support.",
+        )
+    
+    except stripe.error.StripeError as e:
+        # Other Stripe errors (network, authentication, etc.)
+        logger.error(
+            "CHECKOUT_SESSION_FAILED | user_id=%s | email=%s | plan=%s | error=%s | type=stripe_error",
+            current_user.id,
+            current_user.email,
+            plan,
+            str(e)
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Payment service temporarily unavailable. Please try again.",
+        )
+    
     except Exception as e:
+        # Unexpected errors
         logger.error(
             "CHECKOUT_SESSION_FAILED | user_id=%s | email=%s | plan=%s | error=%s | type=unexpected",
             current_user.id,
@@ -120,7 +212,7 @@ def create_checkout_session(
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create checkout session",
+            detail="Failed to create checkout session. Please try again later.",
         )
 
 
@@ -142,16 +234,21 @@ async def handle_stripe_webhook(
     Handle Stripe webhook events.
     
     Verifies webhook signature using HMAC-SHA256.
-    Processes:
-    - checkout.session.completed: Updates user.plan based on metadata (starter/pro/business)
-    - customer.subscription.deleted: Reverts user.plan to "free"
-    - customer.subscription.updated: Handles upgrades/downgrades between plans
+    
+    Supported Events:
+    - checkout.session.completed: User completed payment, activate subscription
+    - customer.subscription.created: Subscription created (alternative to checkout)
+    - customer.subscription.deleted: Subscription canceled, revert to free
+    - customer.subscription.updated: Subscription modified (plan changes, etc.)
+    
+    All handlers implement idempotency to prevent duplicate processing.
     """
     # Get raw body and signature header
     body = await request.body()
     signature = request.headers.get("stripe-signature")
 
     if not signature:
+        logger.warning("WEBHOOK_REJECTED | reason=missing_signature")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing signature")
 
     try:
@@ -163,23 +260,143 @@ async def handle_stripe_webhook(
     # Handle specific events
     event_type = event.get("type")
     event_data = event.get("data", {}).get("object", {})
+    event_id = event.get("id", "unknown")
     
-    logger.info("WEBHOOK_RECEIVED | event_type=%s", event_type)
+    logger.info(
+        "WEBHOOK_RECEIVED | event_type=%s | event_id=%s",
+        event_type,
+        event_id
+    )
 
     if event_type == "checkout.session.completed":
-        stripe_service.handle_checkout_completed(event_data, db)
-        logger.info("WEBHOOK_PROCESSED | event_type=%s | status=success", event_type)
+        result = stripe_service.handle_checkout_completed(event_data, db)
+        if result:
+            logger.info(
+                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | user_id=%s | status=success",
+                event_type,
+                event_id,
+                result.id
+            )
+        else:
+            logger.warning(
+                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | status=failed",
+                event_type,
+                event_id
+            )
+        return {"status": "ok", "event": event_type}
+
+    elif event_type == "customer.subscription.created":
+        result = stripe_service.handle_subscription_created(event_data, db)
+        if result:
+            logger.info(
+                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | user_id=%s | status=success",
+                event_type,
+                event_id,
+                result.id
+            )
+        else:
+            logger.warning(
+                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | status=failed",
+                event_type,
+                event_id
+            )
         return {"status": "ok", "event": event_type}
 
     elif event_type == "customer.subscription.deleted":
-        stripe_service.handle_subscription_deleted(event_data, db)
+        result = stripe_service.handle_subscription_deleted(event_data, db)
+        if result:
+            logger.info(
+                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | user_id=%s | status=success",
+                event_type,
+                event_id,
+                result.id
+            )
         return {"status": "ok", "event": event_type}
     
     elif event_type == "customer.subscription.updated":
-        stripe_service.handle_subscription_updated(event_data, db)
+        result = stripe_service.handle_subscription_updated(event_data, db)
+        if result:
+            logger.info(
+                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | user_id=%s | status=success",
+                event_type,
+                event_id,
+                result.id
+            )
         return {"status": "ok", "event": event_type}
 
     else:
         # Acknowledge but ignore other event types
-        logger.info(f"Ignoring Stripe event: {event_type}")
+        logger.info(
+            "WEBHOOK_IGNORED | event_type=%s | event_id=%s | reason=not_handled",
+            event_type,
+            event_id
+        )
         return {"status": "ok", "event": event_type}
+
+
+@router.get(
+    "/status",
+    response_model=BillingStatusResponse,
+    summary="Get user billing status and usage limits",
+    description="Returns current plan, usage, limits, and whether user can perform AI analyses"
+)
+def get_billing_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> BillingStatusResponse:
+    """
+    Get comprehensive billing status for current user.
+    
+    Returns:
+    - plan: Current plan (free, starter, pro, team)
+    - usage_current: Current monthly usage count
+    - usage_limit: Monthly usage limit for current plan
+    - reset_date: When monthly usage resets (None for free plan)
+    - can_analyze: Whether user has analyses remaining
+    - subscription_status: Stripe subscription status (active, canceled, etc.)
+    """
+    settings = get_settings()
+    
+    # Get usage limits by plan
+    usage_limits = {
+        "free": settings.usage_limit_free,
+        "starter": settings.usage_limit_starter,
+        "pro": settings.usage_limit_pro,
+        "team": settings.usage_limit_team,
+    }
+    
+    plan = current_user.plan or "free"
+    usage_limit = usage_limits.get(plan, settings.usage_limit_free)
+    
+    # For paid plans, use monthly counter; for free, use lifetime
+    if plan == "free":
+        usage_current = current_user.lifetime_analyses_count or 0
+    else:
+        usage_current = current_user.monthly_analyses_count or 0
+    
+    # Can analyze if under limit
+    can_analyze = usage_current < usage_limit
+    
+    # Format reset date
+    reset_date = None
+    if current_user.monthly_analyses_reset_at:
+        reset_date = current_user.monthly_analyses_reset_at.isoformat()
+    
+    logger.info(
+        "BILLING_STATUS_CHECKED | user_id=%s | plan=%s | usage=%s/%s | can_analyze=%s | subscription_status=%s",
+        current_user.id,
+        plan,
+        usage_current,
+        usage_limit,
+        can_analyze,
+        current_user.subscription_status
+    )
+    
+    return BillingStatusResponse(
+        plan=plan,
+        usage_current=usage_current,
+        usage_limit=usage_limit,
+        reset_date=reset_date,
+        can_analyze=can_analyze,
+        subscription_status=current_user.subscription_status
+    )

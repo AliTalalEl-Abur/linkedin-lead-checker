@@ -204,14 +204,19 @@ def check_usage_limit(user: User, db: Session) -> None:
                 detail=f"Rate limit: Please wait {seconds_remaining} seconds before next analysis.",
             )
 
-    # MONTHLY LIMITS: Track usage by month_key (YYYY-MM)
-    month_key = get_current_month_key()
-    usage_query = db.query(func.count(UsageEvent.id)).filter(
-        UsageEvent.user_id == user.id,
-        UsageEvent.month_key == month_key,
-        UsageEvent.event_type == "profile_analysis",
-    )
-    usage_count = usage_query.scalar() or 0
+    # MONTHLY LIMITS: Use monthly_analyses_count from user model (set by Stripe webhook)
+    # Fallback to UsageEvent count if monthly_analyses_count is None (legacy users)
+    if user.monthly_analyses_count is not None:
+        usage_count = user.monthly_analyses_count
+    else:
+        # Legacy: count from UsageEvent table
+        month_key = get_current_month_key()
+        usage_query = db.query(func.count(UsageEvent.id)).filter(
+            UsageEvent.user_id == user.id,
+            UsageEvent.month_key == month_key,
+            UsageEvent.event_type == "profile_analysis",
+        )
+        usage_count = usage_query.scalar() or 0
 
     # Get limit based on plan
     if user.plan == "starter":
@@ -307,6 +312,11 @@ def record_usage(
 
     if user.plan == "free":
         user.lifetime_analyses_count += 1
+    else:
+        # PAID PLANS: Increment monthly counter (reset by Stripe webhook)
+        if user.monthly_analyses_count is None:
+            user.monthly_analyses_count = 0
+        user.monthly_analyses_count += 1
 
     user.last_analysis_at = datetime.now(timezone.utc)
 
@@ -335,17 +345,22 @@ def get_usage_stats(user: User, db: Session) -> dict:
             "remaining": max(0, limit - used),
         }
     
-    # STARTER/PRO/BUSINESS: monthly usage
-    month_key = get_current_month_key()
-    usage_count = (
-        db.query(func.count(UsageEvent.id))
-        .filter(
-            UsageEvent.user_id == user.id,
-            UsageEvent.month_key == month_key,
-            UsageEvent.event_type == "profile_analysis",
+    # STARTER/PRO/TEAM: monthly usage (use monthly_analyses_count from user)
+    # Fallback to UsageEvent count if monthly_analyses_count is None (legacy users)
+    if user.monthly_analyses_count is not None:
+        usage_count = user.monthly_analyses_count
+    else:
+        # Legacy: count from UsageEvent table
+        month_key = get_current_month_key()
+        usage_count = (
+            db.query(func.count(UsageEvent.id))
+            .filter(
+                UsageEvent.user_id == user.id,
+                UsageEvent.month_key == month_key,
+                UsageEvent.event_type == "profile_analysis",
+            )
+            .scalar()
         )
-        .scalar()
-    )
     
     # Get limit based on plan
     if user.plan == "starter":
@@ -360,9 +375,10 @@ def get_usage_stats(user: User, db: Session) -> dict:
     remaining = max(0, limit - usage_count)
     
     return {
-        "month_key": month_key,
+        "month_key": get_current_month_key(),
         "used": usage_count,
         "limit": limit,
         "remaining": remaining,
         "plan": user.plan,
+        "reset_at": user.monthly_analyses_reset_at,
     }

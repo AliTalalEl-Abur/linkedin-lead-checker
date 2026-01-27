@@ -99,6 +99,42 @@ export default function Home() {
 
   const primaryCTA = getPrimaryCTA();
 
+  // Handle checkout by calling backend API
+  const handleCheckout = async (planName) => {
+    const plan = planName.toLowerCase();
+    
+    try {
+      // Get return URL for after payment
+      const returnUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/billing-return.html?session_id={CHECKOUT_SESSION_ID}`;
+      
+      // Call backend to create Stripe checkout session
+      const response = await authenticatedFetch('/billing/checkout', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          return_url: returnUrl,
+          plan: plan
+        })
+      });
+
+      // Redirect to Stripe checkout
+      if (response.url) {
+        window.location.href = response.url;
+      } else {
+        console.error('No checkout URL received');
+        alert('Error creating checkout session. Please try again.');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      
+      // If authentication error, redirect to login
+      if (error.message.includes('Session expired') || error.message.includes('Not authenticated')) {
+        window.location.href = '/login';
+      } else {
+        alert('Error: ' + error.message);
+      }
+    }
+  };
+
   // Dynamic CTA for pricing cards
   const getPricingCTA = (planName) => {
     if (userState.loading) {
@@ -120,7 +156,7 @@ export default function Home() {
     if (!userState.hasSubscription) {
       return {
         text: 'Subscribe Now',
-        onClick: () => window.location.href = `/billing/checkout?plan=${planName.toLowerCase()}`
+        onClick: () => handleCheckout(planName)
       };
     }
 
@@ -135,7 +171,7 @@ export default function Home() {
     // Subscribed to different plan - upgrade/downgrade
     return {
       text: 'Switch Plan',
-      onClick: () => window.location.href = `/billing/checkout?plan=${planName.toLowerCase()}`
+      onClick: () => handleCheckout(planName)
     };
   };
 

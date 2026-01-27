@@ -222,7 +222,14 @@ class StripeService:
     ) -> Optional[User]:
         """
         Handle checkout.session.completed webhook event.
-        Updates user plan based on validated price_id from subscription.
+        
+        IDEMPOTENCY: Checks if subscription already processed to avoid duplicates.
+        
+        Actions:
+        - Associates subscription with user
+        - Saves: plan, stripe_customer_id, stripe_subscription_id, status=active
+        - Initializes monthly credits based on plan
+        - Sets monthly_analyses_reset_at to next billing date
         
         SECURITY: Validates price_id against whitelist to prevent unauthorized plans.
         """
@@ -239,6 +246,15 @@ class StripeService:
         if not user:
             logger.warning("CHECKOUT_COMPLETED | ERROR: user_id=%s not found", user_id)
             return None
+        
+        # IDEMPOTENCY: Check if this subscription is already processed
+        if user.stripe_subscription_id == subscription_id and user.plan in ["starter", "pro", "team"]:
+            logger.info(
+                "CHECKOUT_COMPLETED | IDEMPOTENT_SKIP | user_id=%s | subscription_id=%s | already_processed=true",
+                user_id,
+                subscription_id
+            )
+            return user
         
         # SECURITY: Fetch subscription to get actual price_id paid
         try:
@@ -277,6 +293,7 @@ class StripeService:
                 user.plan = "free"
                 user.stripe_customer_id = customer_id
                 user.stripe_subscription_id = subscription_id
+                user.subscription_status = "unauthorized"
                 db.commit()
                 return user
             
@@ -289,20 +306,50 @@ class StripeService:
                     validated_plan
                 )
             
-            # Use validated plan from actual price_id
+            # Get subscription details for billing period
+            current_period_end = subscription.get("current_period_end")
+            subscription_status = subscription.get("status", "active")
+            
+            # Update user with subscription details
             user.plan = validated_plan
             user.stripe_customer_id = customer_id
             user.stripe_subscription_id = subscription_id
+            user.subscription_status = subscription_status
+            
+            # Initialize monthly credits based on plan
+            from app.core.config import get_settings
+            settings = get_settings()
+            
+            plan_limits = {
+                "starter": settings.usage_limit_starter,  # 40
+                "pro": settings.usage_limit_pro,          # 150
+                "team": settings.usage_limit_team,        # 500
+            }
+            
+            # Reset monthly counter and set next reset date
+            user.monthly_analyses_count = 0
+            if current_period_end:
+                from datetime import datetime, timezone
+                user.monthly_analyses_reset_at = datetime.fromtimestamp(
+                    current_period_end, 
+                    tz=timezone.utc
+                )
+            
             db.commit()
             
             logger.info(
-                "CHECKOUT_COMPLETED | user_id=%s | email=%s | plan=%s | price_id=%s | customer_id=%s | subscription_id=%s | validated=true",
+                "CHECKOUT_COMPLETED | user_id=%s | email=%s | plan=%s | price_id=%s | "
+                "customer_id=%s | subscription_id=%s | status=%s | monthly_limit=%s | "
+                "reset_at=%s | validated=true",
                 user_id,
                 user.email,
                 validated_plan,
                 actual_price_id,
                 customer_id,
-                subscription_id
+                subscription_id,
+                subscription_status,
+                plan_limits.get(validated_plan, 0),
+                user.monthly_analyses_reset_at
             )
             return user
             
@@ -315,6 +362,105 @@ class StripeService:
             )
             return None
 
+    def handle_subscription_created(
+        self,
+        subscription: Dict[str, Any],
+        db: Session,
+    ) -> Optional[User]:
+        """
+        Handle customer.subscription.created webhook event.
+        
+        Similar to checkout.session.completed but triggered when subscription is created.
+        This can happen during checkout or when manually creating subscriptions.
+        
+        IDEMPOTENCY: Checks if subscription already processed.
+        """
+        customer_id = subscription.get("customer")
+        subscription_id = subscription.get("id")
+        subscription_status = subscription.get("status", "active")
+        
+        # Find user by customer_id
+        user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+        if not user:
+            logger.warning(
+                "SUBSCRIPTION_CREATED | ERROR: customer_id=%s not found",
+                customer_id
+            )
+            return None
+        
+        # IDEMPOTENCY: Check if already processed
+        if user.stripe_subscription_id == subscription_id and user.plan in ["starter", "pro", "team"]:
+            logger.info(
+                "SUBSCRIPTION_CREATED | IDEMPOTENT_SKIP | user_id=%s | subscription_id=%s | already_processed=true",
+                user.id,
+                subscription_id
+            )
+            return user
+        
+        # Get price_id from subscription items
+        items = subscription.get("items", {}).get("data", [])
+        if not items:
+            logger.error(
+                "SUBSCRIPTION_CREATED | ERROR: No subscription items | user_id=%s",
+                user.id
+            )
+            return None
+        
+        actual_price_id = items[0].get("price", {}).get("id")
+        
+        # SECURITY: Validate price_id
+        try:
+            validated_plan = self.validate_price_id(actual_price_id)
+        except ValueError as e:
+            logger.error(
+                "SUBSCRIPTION_CREATED | SECURITY_VIOLATION | user_id=%s | unauthorized_price_id=%s",
+                user.id,
+                actual_price_id
+            )
+            return None
+        
+        # Get billing period
+        current_period_end = subscription.get("current_period_end")
+        
+        # Update user
+        user.plan = validated_plan
+        user.stripe_subscription_id = subscription_id
+        user.subscription_status = subscription_status
+        
+        # Initialize monthly credits
+        from app.core.config import get_settings
+        settings = get_settings()
+        
+        plan_limits = {
+            "starter": settings.usage_limit_starter,
+            "pro": settings.usage_limit_pro,
+            "team": settings.usage_limit_team,
+        }
+        
+        user.monthly_analyses_count = 0
+        if current_period_end:
+            from datetime import datetime, timezone
+            user.monthly_analyses_reset_at = datetime.fromtimestamp(
+                current_period_end,
+                tz=timezone.utc
+            )
+        
+        db.commit()
+        
+        logger.info(
+            "SUBSCRIPTION_CREATED | user_id=%s | email=%s | plan=%s | subscription_id=%s | "
+            "status=%s | monthly_limit=%s | reset_at=%s",
+            user.id,
+            user.email,
+            validated_plan,
+            subscription_id,
+            subscription_status,
+            plan_limits.get(validated_plan, 0),
+            user.monthly_analyses_reset_at
+        )
+        
+        return user
+
     def handle_subscription_deleted(
         self,
         subscription: Dict[str, Any],
@@ -322,32 +468,44 @@ class StripeService:
     ) -> Optional[User]:
         """
         Handle customer.subscription.deleted webhook event.
-        Reverts user plan to "free" when subscription is cancelled.
         
-        Args:
-            subscription: Stripe subscription object
-            db: Database session
-        
-        Returns:
-            Updated User object, or None if user not found
+        Actions:
+        - Reverts plan to "free"
+        - Sets subscription_status to "canceled"
+        - Keeps customer_id and subscription_id for history
+        - Resets monthly_analyses_count to 0
         """
         customer_id = subscription.get("customer")
+        subscription_id = subscription.get("id")
         
         # Find user by stripe_customer_id
         user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
         if not user:
-            logger.warning("SUBSCRIPTION_DELETED | ERROR: customer_id=%s not found", customer_id)
+            logger.warning(
+                "SUBSCRIPTION_DELETED | ERROR: customer_id=%s not found",
+                customer_id
+            )
             return None
 
         old_plan = user.plan
+        old_status = user.subscription_status
+        
+        # Revert to free plan
         user.plan = "free"
+        user.subscription_status = "canceled"
+        user.monthly_analyses_count = 0
+        user.monthly_analyses_reset_at = None
+        
         db.commit()
         
         logger.info(
-            "SUBSCRIPTION_DELETED | user_id=%s | email=%s | previous_plan=%s | customer_id=%s",
+            "SUBSCRIPTION_DELETED | user_id=%s | email=%s | previous_plan=%s | "
+            "previous_status=%s | subscription_id=%s | customer_id=%s | reverted_to=free",
             user.id,
             user.email,
             old_plan,
+            old_status,
+            subscription_id,
             customer_id
         )
         return user

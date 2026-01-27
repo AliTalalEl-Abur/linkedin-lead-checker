@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesando Pago - LinkedIn Lead Checker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 30px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 30px;
+            display: none;
+        }
+
+        .success-icon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .checkmark {
+            stroke: #28a745;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+            animation: draw 0.8s ease forwards;
+        }
+
+        @keyframes draw {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        p {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .status {
+            font-weight: 600;
+            color: #667eea;
+            margin-top: 20px;
+        }
+
+        .error {
+            color: #dc3545;
+        }
+
+        .success {
+            color: #28a745;
+        }
+
+        .cta-button {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .plan-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            background: #f0f7ff;
+            color: #667eea;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner" id="spinner"></div>
+        <div class="success-icon" id="successIcon">
+            <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="#f0f7ff" />
+                <polyline class="checkmark" points="25,50 40,65 75,30" />
+            </svg>
+        </div>
+
+        <h1 id="title">Procesando tu pago...</h1>
+        <p id="message">Estamos activando tu suscripción. Esto tomará solo unos segundos.</p>
+        <div class="status" id="status"></div>
+        <div id="planBadge"></div>
+        <a href="/" class="cta-button" id="ctaButton" style="display: none;">Comenzar a Usar</a>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        // Get session_id from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+
+        if (!sessionId) {
+            showError('No se encontró ID de sesión. Por favor contacta soporte.');
+        } else {
+            checkSubscriptionStatus();
+        }
+
+        async function checkSubscriptionStatus() {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                showError('No estás autenticado. Por favor inicia sesión.');
+                return;
+            }
+
+            let attempts = 0;
+            const maxAttempts = 20; // 20 intentos = ~40 segundos
+            const delay = 2000; // 2 segundos entre intentos
+
+            const interval = setInterval(async () => {
+                attempts++;
+
+                try {
+                    // Consultar estado del usuario
+                    const response = await fetch(`${API_BASE}/user`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Error al consultar el estado');
+                    }
+
+                    const data = await response.json();
+
+                    // Verificar si el usuario tiene un plan de pago activo
+                    if (data.plan && ['starter', 'pro', 'team'].includes(data.plan)) {
+                        clearInterval(interval);
+                        showSuccess(data.plan, data.monthly_limit);
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        showDelayedActivation();
+                    } else {
+                        updateStatus(`Activando suscripción... (intento ${attempts}/${maxAttempts})`);
+                    }
+                } catch (error) {
+                    console.error('Error checking status:', error);
+                    if (attempts >= maxAttempts) {
+                        clearInterval(interval);
+                        showDelayedActivation();
+                    }
+                }
+            }, delay);
+        }
+
+        function showSuccess(plan, monthlyLimit) {
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('successIcon').style.display = 'block';
+            document.getElementById('title').textContent = '¡Pago Exitoso! 🎉';
+            document.getElementById('message').textContent = `Tu suscripción ha sido activada correctamente. Ahora tienes acceso completo a ${monthlyLimit} análisis mensuales.`;
+            document.getElementById('status').textContent = 'Suscripción activa';
+            document.getElementById('status').classList.add('success');
+            
+            const planNames = {
+                'starter': 'Starter Plan',
+                'pro': 'Pro Plan',
+                'team': 'Team Plan'
+            };
+            
+            document.getElementById('planBadge').innerHTML = 
+                `<div class="plan-badge">${planNames[plan] || plan.toUpperCase()}</div>`;
+            
+            document.getElementById('ctaButton').style.display = 'inline-block';
+        }
+
+        function showDelayedActivation() {
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('title').textContent = 'Pago Recibido';
+            document.getElementById('message').textContent = 
+                'Tu pago fue procesado correctamente. La activación de tu suscripción puede tomar unos minutos. ' +
+                'Recibirás un email de confirmación cuando esté lista.';
+            document.getElementById('status').textContent = 'Procesando activación...';
+            document.getElementById('ctaButton').style.display = 'inline-block';
+            document.getElementById('ctaButton').textContent = 'Volver al Inicio';
+        }
+
+        function showError(message) {
+            document.getElementById('spinner').style.display = 'none';
+            document.getElementById('title').textContent = 'Error';
+            document.getElementById('message').textContent = message;
+            document.getElementById('status').textContent = 'Por favor contacta soporte si el problema persiste.';
+            document.getElementById('status').classList.add('error');
+            document.getElementById('ctaButton').style.display = 'inline-block';
+            document.getElementById('ctaButton').textContent = 'Volver al Inicio';
+        }
+
+        function updateStatus(text) {
+            document.getElementById('status').textContent = text;
+        }
+    </script>
+</body>
+</html>

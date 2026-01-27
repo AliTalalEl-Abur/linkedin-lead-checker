@@ -6,6 +6,7 @@
 const API_CONFIG = {
   baseUrl: "https://linkedin-lead-checker-api.onrender.com",
   loginEndpoint: "/auth/login",
+  billingStatusEndpoint: "/billing/status",
 };
 
 // DOM Elements
@@ -43,12 +44,14 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /**
- * Check if user is already logged in
+ * Check if user is already logged in and update billing status
  */
-function checkLoginStatus() {
-  chrome.storage.local.get(["access_token", "email"], (result) => {
+async function checkLoginStatus() {
+  chrome.storage.local.get(["access_token", "email"], async (result) => {
     if (result.access_token) {
       showLoggedInView(result.email);
+      // Fetch and update billing status
+      await updateBillingStatus(result.access_token);
     } else {
       showLoginForm();
     }
@@ -71,6 +74,231 @@ function showLoggedInView(email) {
   loginFormContainer.style.display = "none";
   loggedInView.style.display = "block";
   userEmailDisplay.textContent = `Logged in as: ${email}`;
+}
+
+// ============================================================================
+// BILLING STATUS & PLAN MANAGEMENT
+// ============================================================================
+
+/**
+ * Fetch billing status from backend (returns data without UI update)
+ */
+async function fetchBillingStatus(token) {
+  try {
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}${API_CONFIG.billingStatusEndpoint}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch billing status:", response.status);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching billing status:", error);
+    return null;
+  }
+}
+
+/**
+ * Fetch and update billing status from backend
+ * This ensures the extension UI reflects the latest subscription state
+ * without requiring logout/login after payment
+ */
+async function updateBillingStatus(token) {
+  try {
+    const response = await fetch(
+      `${API_CONFIG.baseUrl}${API_CONFIG.billingStatusEndpoint}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      }
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch billing status:", response.status);
+      // Don't show error to user - just use cached data
+      return;
+    }
+
+    const billingData = await response.json();
+    
+    // Store billing data locally
+    await chrome.storage.local.set({
+      billing_status: billingData,
+      billing_last_updated: Date.now()
+    });
+
+    // Check if plan changed
+    chrome.storage.local.get(['cached_plan'], (result) => {
+      const oldPlan = result.cached_plan || 'free';
+      const newPlan = billingData.plan || 'free';
+      
+      if (oldPlan !== newPlan) {
+        // Plan changed! Update UI
+        handlePlanChange(oldPlan, newPlan, billingData);
+      }
+      
+      // Always update cached plan
+      chrome.storage.local.set({ cached_plan: newPlan });
+    });
+
+    // Update UI with current status
+    updateUIWithBillingStatus(billingData);
+
+  } catch (error) {
+    console.error("Error fetching billing status:", error);
+    // Fail silently - use cached data
+  }
+}
+
+/**
+ * Handle plan change event
+ * Shows a notification to the user about their upgraded plan
+ */
+function handlePlanChange(oldPlan, newPlan, billingData) {
+  // Show success message for upgrade
+  if (newPlan !== 'free' && oldPlan === 'free') {
+    const planNames = {
+      'starter': 'Starter',
+      'pro': 'Pro',
+      'team': 'Team'
+    };
+    
+    const planName = planNames[newPlan] || newPlan;
+    showStatus(`🎉 Welcome to ${planName}! You now have ${billingData.usage_limit} analyses/month.`, "success");
+    
+    // Clear message after 5 seconds
+    setTimeout(() => {
+      clearStatus();
+    }, 5000);
+  }
+}
+
+/**
+ * Update UI elements based on billing status
+ * - Shows plan badge
+ * - Updates usage information
+ * - Shows/hides upgrade prompts
+ */
+function updateUIWithBillingStatus(billingData) {
+  const plan = billingData.plan || 'free';
+  const canAnalyze = billingData.can_analyze;
+  const usageCurrent = billingData.usage_current || 0;
+  const usageLimit = billingData.usage_limit || 0;
+  
+  // Update plan badge if it exists
+  updatePlanBadge(plan);
+  
+  // Update usage display if it exists
+  updateUsageDisplay(usageCurrent, usageLimit, canAnalyze);
+  
+  // Show/hide upgrade prompts based on plan
+  updateUpgradePrompts(plan, canAnalyze);
+}
+
+/**
+ * Update plan badge in UI
+ */
+function updatePlanBadge(plan) {
+  let planBadge = document.getElementById('planBadge');
+  
+  // Create badge if it doesn't exist
+  if (!planBadge) {
+    planBadge = document.createElement('div');
+    planBadge.id = 'planBadge';
+    planBadge.className = 'plan-badge';
+    
+    const loggedInContent = document.querySelector('.logged-in-content');
+    if (loggedInContent) {
+      loggedInContent.insertBefore(planBadge, loggedInContent.firstChild);
+    }
+  }
+  
+  // Set badge content and style based on plan
+  const planConfig = {
+    'free': { label: 'Free Plan', class: 'plan-free' },
+    'starter': { label: '⭐ Starter Plan', class: 'plan-starter' },
+    'pro': { label: '🚀 Pro Plan', class: 'plan-pro' },
+    'team': { label: '👥 Team Plan', class: 'plan-team' }
+  };
+  
+  const config = planConfig[plan] || planConfig['free'];
+  planBadge.textContent = config.label;
+  planBadge.className = `plan-badge ${config.class}`;
+}
+
+/**
+ * Update usage display in UI
+ */
+function updateUsageDisplay(current, limit, canAnalyze) {
+  let usageDisplay = document.getElementById('usageDisplay');
+  
+  // Create usage display if it doesn't exist
+  if (!usageDisplay) {
+    usageDisplay = document.createElement('div');
+    usageDisplay.id = 'usageDisplay';
+    usageDisplay.className = 'usage-display';
+    
+    const loggedInContent = document.querySelector('.logged-in-content');
+    if (loggedInContent) {
+      loggedInContent.appendChild(usageDisplay);
+    }
+  }
+  
+  // Calculate percentage
+  const percentage = limit > 0 ? Math.round((current / limit) * 100) : 0;
+  
+  // Set warning class if near limit
+  const warningClass = percentage >= 80 ? 'usage-warning' : '';
+  
+  usageDisplay.className = `usage-display ${warningClass}`;
+  usageDisplay.innerHTML = `
+    <div class="usage-text">
+      <span class="usage-label">Monthly Usage:</span>
+      <span class="usage-count">${current} / ${limit}</span>
+    </div>
+    <div class="usage-bar">
+      <div class="usage-bar-fill" style="width: ${percentage}%"></div>
+    </div>
+  `;
+  
+  // Update analyze button state
+  if (analyzeButton) {
+    analyzeButton.disabled = !canAnalyze;
+    analyzeButton.title = canAnalyze ? 'Analyze current LinkedIn profile' : 'Monthly limit reached';
+  }
+}
+
+/**
+ * Update upgrade prompts visibility
+ */
+function updateUpgradePrompts(plan, canAnalyze) {
+  // Hide "View Pricing" button for paid plans
+  if (viewPricingButton) {
+    if (plan !== 'free') {
+      viewPricingButton.style.display = 'none';
+    } else {
+      viewPricingButton.style.display = 'block';
+    }
+  }
+  
+  // Show limit modal if can't analyze
+  if (!canAnalyze && plan === 'free') {
+    // Don't auto-show modal, just disable button
+    // Modal will show when user tries to analyze
+  }
 }
 
 /**
@@ -154,7 +382,7 @@ async function handleLogin(e) {
         access_token: data.access_token,
         email: email,
       },
-      () => {
+      async () => {
         showStatus("Login successful!", "success");
         setLoading(false);
 
@@ -162,6 +390,9 @@ async function handleLogin(e) {
         setTimeout(() => {
           showLoggedInView(email);
         }, 500);
+        
+        // Fetch billing status after login
+        await updateBillingStatus(data.access_token);
       }
     );
   } catch (error) {
@@ -273,16 +504,7 @@ async function handleAnalyze() {
       return;
     }
 
-    // TODO: Replace with real API call when backend is ready
-    // For now, show preview results
-    // When implementing real API:
-    // 1. Call backend /api/v1/analyze endpoint
-    // 2. Check response for limit_reached or 429 status
-    // 3. If limit reached, call showLimitModal() instead of showing error
-    // 4. Never show technical errors or mention OpenAI to user
-    
-    /*
-    // Example real API call (to be implemented):
+    // Get authentication token
     const result = await chrome.storage.local.get(['access_token']);
     if (!result.access_token) {
       showStatus("Please login first", "error");
@@ -290,17 +512,53 @@ async function handleAnalyze() {
       return;
     }
 
-    const response = await fetch(`${API_CONFIG.baseUrl}/api/v1/analyze`, {
+    // Check billing status and credits before making the call
+    showStatus("Checking credits...", "info");
+    const billingStatus = await fetchBillingStatus(result.access_token);
+    
+    if (!billingStatus.can_analyze) {
+      analyzeButton.disabled = false;
+      if (billingStatus.plan === 'free') {
+        showLimitModal();
+      } else {
+        showStatus("⚠️ You've reached your monthly limit. Your credits reset on the 1st.", "error");
+      }
+      return;
+    }
+
+    // Extract profile data from the page
+    showStatus("Extracting profile data...", "info");
+    const profileData = await extractProfileData(activeTab.id);
+    
+    if (!profileData || Object.keys(profileData).length === 0) {
+      showStatus("❌ Could not extract profile data. Make sure you're on a LinkedIn profile page.", "error");
+      analyzeButton.disabled = false;
+      return;
+    }
+
+    // Call the real API endpoint
+    showStatus("Analyzing profile with AI...", "info");
+    const response = await fetch(`${API_CONFIG.baseUrl}/api/v1/analyze/linkedin`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${result.access_token}`
       },
-      body: JSON.stringify({ profile_url: activeTab.url })
+      body: JSON.stringify({
+        profile_extract: profileData,
+        profile_url: activeTab.url
+      })
     });
 
-    if (response.status === 429 || response.status === 403) {
-      // User hit monthly limit
+    if (response.status === 429) {
+      // User hit monthly limit - 1 credit will be deducted when limit is reached
+      analyzeButton.disabled = false;
+      showLimitModal();
+      return;
+    }
+
+    if (response.status === 403) {
+      // No active subscription or credits
       analyzeButton.disabled = false;
       showLimitModal();
       return;
@@ -308,33 +566,125 @@ async function handleAnalyze() {
 
     if (!response.ok) {
       // Generic error - don't show technical details
-      showStatus("Unable to analyze profile. Please try again.", "error");
+      const errorData = await response.json().catch(() => ({}));
+      const errorMsg = errorData.detail || "Unable to analyze profile. Please try again.";
+      showStatus(`❌ ${errorMsg}`, "error");
       analyzeButton.disabled = false;
       return;
     }
 
     const data = await response.json();
     
-    // Check if response indicates limit reached
-    if (data.limit_reached || data.preview_only && data.reason === 'limit_reached') {
+    // Check if response is in preview mode (no credits used)
+    if (data.preview) {
+      // Preview mode - show upgrade prompt
       analyzeButton.disabled = false;
       showLimitModal();
       return;
     }
 
+    // Success! 1 credit was deducted by the backend
     // Display real results
-    displayAnalysisResults(data);
-    */
-
-    // Generate preview results (temporary)
     showStatus("", "");
-    generatePreviewResults();
+    displayAnalysisResults(data);
+    
+    // Refresh billing status to update credits display
+    await refreshBillingStatus();
+    
     analyzeButton.disabled = false;
   } catch (error) {
     console.error("Analyze error:", error);
     // Don't show technical errors to user
     showStatus("Unable to analyze profile. Please try again.", "error");
     analyzeButton.disabled = false;
+  }
+}
+
+/**
+ * Extract profile data from LinkedIn page using content script
+ */
+async function extractProfileData(tabId) {
+  try {
+    const response = await chrome.tabs.sendMessage(tabId, { action: "extractProfile" });
+    if (response && response.success) {
+      return response.data;
+    }
+    return null;
+  } catch (error) {
+    console.error("Failed to extract profile data:", error);
+    return null;
+  }
+}
+
+/**
+ * Display real analysis results from API
+ */
+function displayAnalysisResults(data) {
+  // Extract UI data from response
+  const ui = data.ui || {};
+  const qualification = data.qualification || {};
+  
+  // Show contact recommendation
+  const shouldContact = ui.should_contact;
+  const priority = ui.priority || "medium";
+  const score = ui.score || 0;
+  
+  // Render star rating based on score (convert 0-100 to 1-5 stars)
+  const starCount = Math.round((score / 100) * 5);
+  renderStars(starCount);
+  
+  // Display key insights
+  const insights = [];
+  
+  if (ui.reasoning) {
+    insights.push(ui.reasoning);
+  }
+  
+  if (ui.key_points && Array.isArray(ui.key_points)) {
+    insights.push(...ui.key_points);
+  }
+  
+  if (ui.suggested_approach) {
+    insights.push(`💡 Suggested approach: ${ui.suggested_approach}`);
+  }
+  
+  if (ui.red_flags && ui.red_flags.length > 0) {
+    insights.push(`⚠️ Red flags: ${ui.red_flags.join(", ")}`);
+  }
+  
+  // Render insights list
+  insightsList.innerHTML = "";
+  insights.slice(0, 5).forEach((insight) => {
+    const li = document.createElement("li");
+    li.textContent = insight;
+    insightsList.appendChild(li);
+  });
+  
+  // Show contact recommendation badge
+  if (shouldContact) {
+    const badge = document.createElement("div");
+    badge.className = "success-badge";
+    badge.style.marginBottom = "12px";
+    const priorityEmoji = priority === "high" ? "🔥" : priority === "medium" ? "✅" : "👍";
+    badge.textContent = `${priorityEmoji} Recommended Contact (${priority} priority)`;
+    resultsContainer.insertBefore(badge, resultsContainer.firstChild);
+  }
+  
+  // Show results, hide analyze button
+  resultsContainer.style.display = "block";
+  analyzeButton.style.display = "none";
+}
+
+/**
+ * Refresh billing status to update credits display
+ */
+async function refreshBillingStatus() {
+  const result = await chrome.storage.local.get(['access_token']);
+  if (result.access_token) {
+    const billingStatus = await fetchBillingStatus(result.access_token);
+    if (billingStatus) {
+      updateUIWithBillingStatus(billingStatus);
+    }
   }
 }
 

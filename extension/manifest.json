@@ -30,5 +30,12 @@
       "js": ["src/content.js"],
       "run_at": "document_idle"
     }
-  ]
+  ],
+  "externally_connectable": {
+    "matches": [
+      "http://localhost:3000/*",
+      "https://linkedin-lead-checker.vercel.app/*",
+      "https://*.vercel.app/*"
+    ]
+  }
 }

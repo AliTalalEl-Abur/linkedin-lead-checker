@@ -21,3 +21,37 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// Listen for messages from external websites (billing pages)
+chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+  console.log('External message received:', request, 'from:', sender.url);
+  
+  if (request.action === "ping") {
+    // Respond to ping to confirm extension is installed
+    sendResponse({ 
+      installed: true, 
+      version: chrome.runtime.getManifest().version 
+    });
+  } else if (request.action === "openPopup") {
+    // Open the extension popup/dashboard
+    chrome.action.openPopup()
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch((error) => {
+        // If openPopup fails (not allowed from background), try opening a new tab
+        chrome.tabs.create({
+          url: chrome.runtime.getURL('popup.html')
+        });
+        sendResponse({ success: true, method: 'new_tab' });
+      });
+    return true; // Keep channel open for async response
+  } else if (request.action === "openWelcome") {
+    // Open welcome page
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('welcome.html')
+    });
+    sendResponse({ success: true });
+  }
+  
+  return true; // Keep the message channel open for async responses
+});
