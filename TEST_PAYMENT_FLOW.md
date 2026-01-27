@@ -391,7 +391,7 @@ Estado 4: "Analyzing profile with AI..." (info)
 1. GET /billing/status
    Response: 200 OK { can_analyze: true, usage_current: 0 }
 
-2. POST /api/v1/analyze/linkedin
+2. POST /analyze/linkedin
    Request Body: {
      "profile_extract": {
        "name": "John Doe",
@@ -537,7 +537,7 @@ SELECT COUNT(*) FROM usage_logs WHERE user_id = 123;
 
 #### Backend Response (4to análisis):
 ```json
-POST /api/v1/analyze/linkedin
+POST /analyze/linkedin
 Response: 429 Too Many Requests
 {
   "detail": "You've reached your monthly limit (3 analyses/month). Your limit will reset on the 1st of next month."

@@ -538,7 +538,7 @@ async function handleAnalyze() {
 
     // Call the real API endpoint
     showStatus("Analyzing profile with AI...", "info");
-    const response = await fetch(`${API_CONFIG.baseUrl}/api/v1/analyze/linkedin`, {
+    const response = await fetch(`${API_CONFIG.baseUrl}/analyze/linkedin`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -30,7 +30,7 @@ El botón "Analyze" ahora está **completamente conectado** con el sistema real 
 
 ### 4. **Llamada al Backend**
    ```javascript
-   POST /api/v1/analyze/linkedin
+   POST /analyze/linkedin
    Headers: Authorization: Bearer {token}
    Body: {
      profile_extract: { name, headline, about, experience_titles },
