@@ -47,7 +47,7 @@ export function clearToken() {
  * Returns: { access_token, token_type }
  */
 export async function login(email) {
-  const response = await fetch(`${getApiUrl()}/auth/login`, {
+  const response = await fetch(`/api/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
