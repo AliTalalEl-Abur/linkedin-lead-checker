@@ -26,7 +26,7 @@ def _mask_email(email: str) -> str:
 
 
 @router.post("/login", response_model=TokenResponse, summary="User authentication")
-def login(request: LoginRequest, db: Session = Depends(get_db), http_request: Request | None = None):
+def login(request: LoginRequest, http_request: Request, db: Session = Depends(get_db)):
     """
     Authenticate user and return access token.
     Creates new account if email doesn't exist (subject to registration limits).
