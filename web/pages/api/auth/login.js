@@ -1,8 +1,12 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://linkedin-lead-checker-api.onrender.com';
 
 export default async function handler(req, res) {
+  if (req.method === 'GET') {
+    return res.status(200).json({ ok: true, proxy: true });
+  }
+
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
+    res.setHeader('Allow', ['GET', 'POST']);
     return res.status(405).json({ detail: 'Method Not Allowed' });
   }
 

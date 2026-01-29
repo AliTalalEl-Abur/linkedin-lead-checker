@@ -7,7 +7,11 @@ export default function DebugAuth() {
   const [status, setStatus] = useState('');
   const [responseText, setResponseText] = useState('');
   const [errorText, setErrorText] = useState('');
+  const [proxyStatus, setProxyStatus] = useState('');
+  const [proxyResponseText, setProxyResponseText] = useState('');
+  const [proxyErrorText, setProxyErrorText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [proxyLoading, setProxyLoading] = useState(false);
 
   const handleTest = async (e) => {
     e.preventDefault();
@@ -33,10 +37,35 @@ export default function DebugAuth() {
     }
   };
 
+  const handleProxyTest = async (e) => {
+    e.preventDefault();
+    setProxyStatus('');
+    setProxyResponseText('');
+    setProxyErrorText('');
+    setProxyLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      setProxyStatus(`HTTP ${res.status}`);
+      const text = await res.text();
+      setProxyResponseText(text);
+    } catch (err) {
+      setProxyErrorText(err?.message || String(err));
+    } finally {
+      setProxyLoading(false);
+    }
+  };
+
   return (
     <main style={{ maxWidth: 720, margin: '40px auto', fontFamily: 'system-ui' }}>
       <h1>Debug Auth</h1>
       <p><strong>API_URL:</strong> {API_URL}</p>
+      <p><strong>Proxy URL:</strong> {typeof window === 'undefined' ? '' : `${window.location.origin}/api/auth/login`}</p>
       <form onSubmit={handleTest}>
         <label>
           Email
@@ -48,9 +77,14 @@ export default function DebugAuth() {
             style={{ display: 'block', width: '100%', padding: 8, marginTop: 6, marginBottom: 12 }}
           />
         </label>
-        <button type="submit" disabled={loading}>
-          {loading ? 'Testing...' : 'Test /auth/login'}
-        </button>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <button type="submit" disabled={loading}>
+            {loading ? 'Testing direct...' : 'Test direct /auth/login'}
+          </button>
+          <button type="button" onClick={handleProxyTest} disabled={proxyLoading}>
+            {proxyLoading ? 'Testing proxy...' : 'Test proxy /api/auth/login'}
+          </button>
+        </div>
       </form>
 
       {status && (
@@ -61,6 +95,18 @@ export default function DebugAuth() {
       )}
       {errorText && (
         <pre style={{ background: '#111', color: '#f66', padding: 12, overflow: 'auto' }}>{errorText}</pre>
+      )}
+
+      <hr style={{ margin: '24px 0' }} />
+
+      {proxyStatus && (
+        <p><strong>Proxy Status:</strong> {proxyStatus}</p>
+      )}
+      {proxyResponseText && (
+        <pre style={{ background: '#111', color: '#0ff', padding: 12, overflow: 'auto' }}>{proxyResponseText}</pre>
+      )}
+      {proxyErrorText && (
+        <pre style={{ background: '#111', color: '#f66', padding: 12, overflow: 'auto' }}>{proxyErrorText}</pre>
       )}
     </main>
   );
