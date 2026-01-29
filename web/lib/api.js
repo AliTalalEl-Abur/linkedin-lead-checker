@@ -2,7 +2,7 @@
  * API Configuration
  * Uses NEXT_PUBLIC_API_URL from environment variables (required in production)
  */
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://linkedin-lead-checker-api.onrender.com";
 
 function getApiUrl() {
   if (!API_URL) {
