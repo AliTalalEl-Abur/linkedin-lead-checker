@@ -67,10 +67,10 @@ def get_stripe_service() -> StripeService:
 )
 def create_checkout_session(
     request: CheckoutRequest,
+    http_request: Request,
     current_user: User = Depends(get_current_user),  # ✅ SECURITY: JWT authentication required
     db: Session = Depends(get_db),
     stripe_service: StripeService = Depends(get_stripe_service),
-    http_request: Request | None = None,
 ):
     """
     Create a Stripe checkout session for upgrading to paid plan.
@@ -356,9 +356,9 @@ async def handle_stripe_webhook(
     description="Returns current plan, usage, limits, and whether user can perform AI analyses"
 )
 def get_billing_status(
+    http_request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    http_request: Request | None = None,
 ) -> BillingStatusResponse:
     """
     Get comprehensive billing status for current user.
