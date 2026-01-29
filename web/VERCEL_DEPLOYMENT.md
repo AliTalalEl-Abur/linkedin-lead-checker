@@ -68,7 +68,7 @@ In Vercel Dashboard → Project Settings → Environment Variables:
 **Production:**
 ```
 NEXT_PUBLIC_API_URL=https://linkedin-lead-checker-api.onrender.com
-NEXT_PUBLIC_CHECKOUT_RETURN_URL=https://your-vercel-domain.vercel.app/checkout-result?session_id={CHECKOUT_SESSION_ID}
+NEXT_PUBLIC_CHECKOUT_RETURN_URL=https://linkedin-lead-checker.vercel.app/checkout-result?session_id={CHECKOUT_SESSION_ID}
 ```
 
 **Preview (optional):**
@@ -90,18 +90,18 @@ After deployment, update these files with your actual domain:
 const META = {
   title: 'LinkedIn Lead Checker - AI-Powered Lead Qualification',
   description: 'Qualify LinkedIn leads in seconds with AI analysis...',
-  url: 'https://your-vercel-domain.vercel.app', // UPDATE THIS
-  ogImage: 'https://your-vercel-domain.vercel.app/og-image.jpg' // UPDATE THIS
+  url: 'https://linkedin-lead-checker.vercel.app',
+  ogImage: 'https://linkedin-lead-checker.vercel.app/og-image.jpg'
 };
 ```
 
 **`web/public/robots.txt`**:
 ```
-Sitemap: https://your-vercel-domain.vercel.app/sitemap.xml
+Sitemap: https://linkedin-lead-checker.vercel.app/sitemap.xml
 ```
 
 **`web/public/sitemap.xml`**:
-Replace all `https://your-domain.com` with your actual Vercel domain.
+Replace all `https://linkedin-lead-checker.vercel.app` with your actual Vercel domain if it changes.
 
 ### 6. Trigger Redeployment
 After updating domain references:
@@ -149,7 +149,7 @@ Vercel will auto-deploy on push.
 ### 2. Verify API Integration
 ```bash
 # Check API connection
-curl https://your-vercel-domain.vercel.app/api/health
+curl https://linkedin-lead-checker.vercel.app/api/health
 ```
 
 Expected: Should reach backend at `NEXT_PUBLIC_API_URL`
