@@ -19,7 +19,7 @@ def tail_output(proc):
 print("Starting server...")
 server_process = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "app.main:application", 
-     "--host", "127.0.0.1", "--port", "8001"],
+     "--host", "0.0.0.0", "--port", "8001"],
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
     text=True,
@@ -38,7 +38,8 @@ try:
     print("\n" + "="*70)
     print("Creating user...")
     data = {"email": "test_ratelimit_debug@example.com", "password": "pass", "full_name": "Test"}
-    response = requests.post("http://127.0.0.1:8001/auth/login", json=data, timeout=30)
+    base_url = os.getenv("BACKEND_URL", "")
+    response = requests.post(f"{base_url}/auth/login", json=data, timeout=30)
     token = response.json()["access_token"]
     print(f"✓ User created, token: {token[:20]}...")
     
@@ -49,7 +50,7 @@ try:
         "current_company": "Test", "current_position": "Test", "location": "Test"
     }}
     response = requests.post(
-        "http://127.0.0.1:8001/analyze/linkedin",
+        f"{base_url}/analyze/linkedin",
         headers={"Authorization": f"Bearer {token}"},
         json=profile,
         timeout=30
@@ -59,7 +60,7 @@ try:
     print("\n" + "="*70)
     print("Second analysis immediately (should fail with 429)...")
     response = requests.post(
-        "http://127.0.0.1:8001/analyze/linkedin",
+        f"{base_url}/analyze/linkedin",
         headers={"Authorization": f"Bearer {token}"},
         json=profile,
         timeout=30

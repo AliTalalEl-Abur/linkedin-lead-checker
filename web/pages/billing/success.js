@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import { authenticatedFetch, getStoredToken } from '../../lib/api';
-import { useChromeExtension, isChromeBrowser, getChromeWebStoreUrl } from '../../lib/extension';
+import { useChromeExtension, isChromeBrowser } from '../../lib/extension';
 import Button from '../../components/Button';
 import styles from '../../styles/Dashboard.module.css';
 
 export default function BillingSuccess() {
   const router = useRouter();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
   const { session_id } = router.query;
   const { isInstalled, isChecking, openExtension } = useChromeExtension();
   const [showInstructions, setShowInstructions] = useState(false);
@@ -22,7 +23,7 @@ export default function BillingSuccess() {
     // Verificar que el usuario esté autenticado
     const token = getStoredToken();
     if (!token) {
-      router.push('/login');
+      window.location.href = `${siteUrl}/login`;
       return;
     }
 
@@ -84,7 +85,11 @@ export default function BillingSuccess() {
   };
 
   const handleGoToDashboard = () => {
-    router.push('/dashboard');
+    window.location.href = `${siteUrl}/dashboard`;
+  };
+
+  const handleOpenLinkedIn = () => {
+    window.location.href = 'https://www.linkedin.com';
   };
 
   if (status.loading) {
@@ -139,6 +144,9 @@ export default function BillingSuccess() {
 
   const planInfo = getPlanDisplay(status.plan);
   const isActivePlan = ['starter', 'pro', 'team'].includes(status.plan);
+  const remainingAnalyses = status.billingInfo
+    ? Math.max(0, (status.billingInfo.usage_limit || 0) - (status.billingInfo.usage_current || 0))
+    : 0;
 
   return (
     <>
@@ -188,6 +196,13 @@ export default function BillingSuccess() {
                       {status.billingInfo.usage_current} / {status.billingInfo.usage_limit}
                     </span>
                   </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Remaining Analyses</span>
+                    <span className="font-semibold text-gray-900">
+                      {remainingAnalyses}
+                    </span>
+                  </div>
                   
                   {status.billingInfo.reset_date && (
                     <div className="flex justify-between">
@@ -211,7 +226,7 @@ export default function BillingSuccess() {
             {/* Success Message */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-blue-800">
-                <strong>🎉 You're all set!</strong> You can now use the extension to analyze {status.billingInfo?.usage_limit || 'unlimited'} LinkedIn profiles per month.
+                <strong>🎉 You're all set!</strong> You have {remainingAnalyses} analyses remaining this cycle.
               </p>
             </div>
 
@@ -262,6 +277,13 @@ export default function BillingSuccess() {
                 className="w-full px-8 py-4 text-blue-600 border-2 border-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
               >
                 Go to Dashboard
+              </button>
+
+              <button
+                onClick={handleOpenLinkedIn}
+                className="w-full px-8 py-4 text-gray-700 border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+              >
+                Open LinkedIn
               </button>
             </div>
 

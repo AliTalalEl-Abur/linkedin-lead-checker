@@ -6,12 +6,18 @@ import PricingCard from '../components/PricingCard';
 import { getStoredToken, authenticatedFetch } from '../lib/api';
 import { trackEvent } from '../lib/tracking';
 
+const WEB_URL = process.env.NEXT_PUBLIC_SITE_URL || '';
+const OG_IMAGE_URL = WEB_URL ? `${WEB_URL}/og-image.jpg` : '';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const CHECKOUT_RETURN_URL = process.env.NEXT_PUBLIC_CHECKOUT_RETURN_URL || '';
+const CHROME_WEBSTORE_URL = process.env.NEXT_PUBLIC_CHROME_WEBSTORE_URL || '';
+
 // SEO Metadata
 const META = {
   title: 'LinkedIn Lead Checker - AI-Powered Lead Qualification',
   description: 'Qualify LinkedIn leads in seconds with AI analysis. Stop wasting time on bad-fit prospects. Get instant scoring, priority recommendations, and personalized outreach strategies.',
-  url: 'https://linkedin-lead-checker.vercel.app',
-  ogImage: 'https://linkedin-lead-checker.vercel.app/og-image.jpg'
+  url: WEB_URL,
+  ogImage: OG_IMAGE_URL
 };
 
 export default function Home() {
@@ -53,7 +59,10 @@ export default function Home() {
 
     const checkSoftLaunch = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8001'}/health`);
+        if (!process.env.NEXT_PUBLIC_API_URL) {
+          return;
+        }
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/health`);
         const data = await response.json();
         setSoftLaunchMode(data.soft_launch_mode || false);
       } catch (error) {
@@ -80,8 +89,12 @@ export default function Home() {
     return {
       text: 'Install Chrome Extension',
       onClick: () => {
+        if (!CHROME_WEBSTORE_URL) {
+          alert('Chrome Web Store URL is not configured.');
+          return;
+        }
         trackEvent('install_extension_click', 'landing');
-        window.open('https://chrome.google.com/webstore', '_blank');
+        window.open(CHROME_WEBSTORE_URL, '_blank');
       }
     };
   };
@@ -105,7 +118,10 @@ export default function Home() {
     
     try {
       // Get return URL for after payment
-      const returnUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/billing-return.html?session_id={CHECKOUT_SESSION_ID}`;
+      if (!CHECKOUT_RETURN_URL) {
+        throw new Error('Missing NEXT_PUBLIC_CHECKOUT_RETURN_URL');
+      }
+      const returnUrl = CHECKOUT_RETURN_URL;
       
       // Call backend to create Stripe checkout session
       const response = await authenticatedFetch('/billing/checkout', {
@@ -128,49 +144,34 @@ export default function Home() {
       
       // If authentication error, redirect to login
       if (error.message.includes('Session expired') || error.message.includes('Not authenticated')) {
-        window.location.href = '/login';
+        window.location.href = `${WEB_URL}/login`;
       } else {
         alert('Error: ' + error.message);
       }
     }
   };
 
-  // Dynamic CTA for pricing cards
+  // Pricing CTA for cards
   const getPricingCTA = (planName) => {
+    const labelMap = {
+      starter: 'Get Started',
+      pro: 'Get Pro',
+      team: 'Get Team'
+    };
+
     if (userState.loading) {
-      return {
-        text: 'Get Started',
-        onClick: () => {}
-      };
+      return { text: labelMap[planName], onClick: () => {} };
     }
 
-    // Not authenticated - redirect to login/signup
     if (!userState.isAuthenticated) {
       return {
-        text: 'Get Started',
-        onClick: () => window.location.href = '/login'
+        text: labelMap[planName],
+        onClick: () => window.location.href = `${WEB_URL}/login`
       };
     }
 
-    // Authenticated but no subscription - go to checkout
-    if (!userState.hasSubscription) {
-      return {
-        text: 'Subscribe Now',
-        onClick: () => handleCheckout(planName)
-      };
-    }
-
-    // Already subscribed to this plan
-    if (userState.plan === planName.toLowerCase()) {
-      return {
-        text: 'Current Plan',
-        onClick: () => window.location.href = '/dashboard'
-      };
-    }
-
-    // Subscribed to different plan - upgrade/downgrade
     return {
-      text: 'Switch Plan',
+      text: labelMap[planName],
       onClick: () => handleCheckout(planName)
     };
   };

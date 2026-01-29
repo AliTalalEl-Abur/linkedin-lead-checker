@@ -6,18 +6,18 @@
 - [ ] Dependencies installed: `pip install -r requirements.txt`
 - [ ] Test suite passes: `python test_stripe_integration.py` → 5/5 tests
 - [ ] Backend starts: `uvicorn app.main:app --reload`
-- [ ] API docs accessible: http://127.0.0.1:8000/docs
-- [ ] Health check works: http://127.0.0.1:8000/health
+- [ ] API docs accessible: BACKEND_URL/docs
+- [ ] Health check works: BACKEND_URL/health
 
 ### Frontend Setup
 - [ ] Node dependencies installed: `cd web && npm install`
 - [ ] Frontend starts: `npm run dev`
 - [ ] Pages load:
-  - [ ] http://localhost:3000/login
-  - [ ] http://localhost:3000/onboarding
-  - [ ] http://localhost:3000/dashboard
-  - [ ] http://localhost:3000/upgrade
-  - [ ] http://localhost:3000/checkout-result
+  - [ ] NEXT_PUBLIC_SITE_URL/login
+  - [ ] NEXT_PUBLIC_SITE_URL/onboarding
+  - [ ] NEXT_PUBLIC_SITE_URL/dashboard
+  - [ ] NEXT_PUBLIC_SITE_URL/upgrade
+  - [ ] NEXT_PUBLIC_SITE_URL/checkout-result
 
 ### Stripe Test Account
 - [ ] Stripe account created at https://dashboard.stripe.com
@@ -26,7 +26,7 @@
 - [ ] Pro product created with price
 - [ ] Price ID copied (price_...)
 - [ ] Webhook endpoint configured:
-  - [ ] URL: http://localhost:8000/api/billing/webhook/stripe
+  - [ ] URL: BACKEND_URL/api/billing/webhook/stripe
   - [ ] Events: checkout.session.completed, customer.subscription.deleted
   - [ ] Enabled in Stripe dashboard
 
@@ -58,7 +58,7 @@
 
 ### Webhook Testing (Advanced)
 - [ ] Install Stripe CLI
-- [ ] Run: `stripe listen --forward-to localhost:8000/api/billing/webhook/stripe`
+- [ ] Run: `stripe listen --forward-to BACKEND_URL/api/billing/webhook/stripe`
 - [ ] In another terminal: `stripe trigger checkout.session.completed`
 - [ ] Check backend logs for webhook processing
 - [ ] Verify user plan updated in database

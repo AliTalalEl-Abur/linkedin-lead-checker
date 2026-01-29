@@ -199,7 +199,7 @@ User can re-upgrade from /dashboard anytime
 **Request**:
 ```json
 {
-  "return_url": "http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}"
+    "return_url": "NEXT_PUBLIC_SITE_URL/checkout-result?session_id={CHECKOUT_SESSION_ID}"
 }
 ```
 

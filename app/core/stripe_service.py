@@ -314,7 +314,7 @@ class StripeService:
             user.plan = validated_plan
             user.stripe_customer_id = customer_id
             user.stripe_subscription_id = subscription_id
-            user.subscription_status = subscription_status
+            user.subscription_status = "active"
             
             # Initialize monthly credits based on plan
             from app.core.config import get_settings
@@ -327,27 +327,28 @@ class StripeService:
             }
             
             # Reset monthly counter and set next reset date
-            user.monthly_analyses_count = 0
+            next_reset_at = None
             if current_period_end:
                 from datetime import datetime, timezone
-                user.monthly_analyses_reset_at = datetime.fromtimestamp(
-                    current_period_end, 
+                next_reset_at = datetime.fromtimestamp(
+                    current_period_end,
                     tz=timezone.utc
                 )
+            if user.monthly_analyses_reset_at is None or (
+                next_reset_at and next_reset_at > user.monthly_analyses_reset_at
+            ):
+                user.monthly_analyses_count = 0
+            user.monthly_analyses_reset_at = next_reset_at
             
             db.commit()
             
             logger.info(
-                "CHECKOUT_COMPLETED | user_id=%s | email=%s | plan=%s | price_id=%s | "
-                "customer_id=%s | subscription_id=%s | status=%s | monthly_limit=%s | "
-                "reset_at=%s | validated=true",
+                "CHECKOUT_COMPLETED | webhook_event_type=checkout.session.completed | user_id=%s | "
+                "plan=%s | subscription_id=%s | status=%s | monthly_quota=%s | reset_at=%s",
                 user_id,
-                user.email,
                 validated_plan,
-                actual_price_id,
-                customer_id,
                 subscription_id,
-                subscription_status,
+                user.subscription_status,
                 plan_limits.get(validated_plan, 0),
                 user.monthly_analyses_reset_at
             )
@@ -425,7 +426,7 @@ class StripeService:
         # Update user
         user.plan = validated_plan
         user.stripe_subscription_id = subscription_id
-        user.subscription_status = subscription_status
+        user.subscription_status = "active" if subscription_status in ["active", "trialing"] else subscription_status
         
         # Initialize monthly credits
         from app.core.config import get_settings
@@ -437,24 +438,28 @@ class StripeService:
             "team": settings.usage_limit_team,
         }
         
-        user.monthly_analyses_count = 0
+        next_reset_at = None
         if current_period_end:
             from datetime import datetime, timezone
-            user.monthly_analyses_reset_at = datetime.fromtimestamp(
+            next_reset_at = datetime.fromtimestamp(
                 current_period_end,
                 tz=timezone.utc
             )
+        if user.monthly_analyses_reset_at is None or (
+            next_reset_at and next_reset_at > user.monthly_analyses_reset_at
+        ):
+            user.monthly_analyses_count = 0
+        user.monthly_analyses_reset_at = next_reset_at
         
         db.commit()
         
         logger.info(
-            "SUBSCRIPTION_CREATED | user_id=%s | email=%s | plan=%s | subscription_id=%s | "
-            "status=%s | monthly_limit=%s | reset_at=%s",
+            "SUBSCRIPTION_CREATED | webhook_event_type=customer.subscription.created | user_id=%s | "
+            "plan=%s | subscription_id=%s | status=%s | monthly_quota=%s | reset_at=%s",
             user.id,
-            user.email,
             validated_plan,
             subscription_id,
-            subscription_status,
+            user.subscription_status,
             plan_limits.get(validated_plan, 0),
             user.monthly_analyses_reset_at
         )
@@ -499,14 +504,12 @@ class StripeService:
         db.commit()
         
         logger.info(
-            "SUBSCRIPTION_DELETED | user_id=%s | email=%s | previous_plan=%s | "
-            "previous_status=%s | subscription_id=%s | customer_id=%s | reverted_to=free",
+            "SUBSCRIPTION_DELETED | webhook_event_type=customer.subscription.deleted | user_id=%s | "
+            "plan=%s | subscription_id=%s | status=%s",
             user.id,
-            user.email,
-            old_plan,
-            old_status,
+            "free",
             subscription_id,
-            customer_id
+            user.subscription_status
         )
         return user
 
@@ -539,7 +542,17 @@ class StripeService:
         # If subscription is cancelled or past_due, revert to free
         if status in ["canceled", "unpaid", "past_due"]:
             user.plan = "free"
-            logger.info(f"Reverted user {user.id} to free plan, subscription status: {status}")
+            user.subscription_status = status
+            user.monthly_analyses_count = 0
+            user.monthly_analyses_reset_at = None
+            logger.info(
+                "SUBSCRIPTION_UPDATED | webhook_event_type=customer.subscription.updated | user_id=%s | "
+                "plan=%s | subscription_id=%s | status=%s",
+                user.id,
+                "free",
+                subscription_id,
+                status
+            )
             db.commit()
             return user
         
@@ -568,16 +581,59 @@ class StripeService:
                 db.commit()
                 return user
             
+            current_period_end = subscription.get("current_period_end")
+            next_reset_at = None
+            if current_period_end:
+                from datetime import datetime, timezone
+                next_reset_at = datetime.fromtimestamp(
+                    current_period_end,
+                    tz=timezone.utc
+                )
+
+            # IDEMPOTENCY: skip if no changes
+            if (
+                user.stripe_subscription_id == subscription_id
+                and user.plan == plan
+                and user.subscription_status == "active"
+                and user.monthly_analyses_reset_at == next_reset_at
+            ):
+                logger.info(
+                    "SUBSCRIPTION_UPDATED | IDEMPOTENT_SKIP | webhook_event_type=customer.subscription.updated | user_id=%s | "
+                    "plan=%s | subscription_id=%s | status=%s",
+                    user.id,
+                    plan,
+                    subscription_id,
+                    status
+                )
+                return user
+
             user.plan = plan
             user.stripe_subscription_id = subscription_id
+            user.subscription_status = "active"
+
+            if user.monthly_analyses_reset_at is None or (
+                next_reset_at and next_reset_at > user.monthly_analyses_reset_at
+            ):
+                user.monthly_analyses_count = 0
+            user.monthly_analyses_reset_at = next_reset_at
+
+            from app.core.config import get_settings
+            settings = get_settings()
+            plan_limits = {
+                "starter": settings.usage_limit_starter,
+                "pro": settings.usage_limit_pro,
+                "team": settings.usage_limit_team,
+            }
+
             logger.info(
-                "SUBSCRIPTION_ACTIVATED | user_id=%s | email=%s | plan=%s | subscription_id=%s | status=%s | price_id=%s | validated=true",
+                "SUBSCRIPTION_UPDATED | webhook_event_type=customer.subscription.updated | user_id=%s | "
+                "plan=%s | subscription_id=%s | status=%s | monthly_quota=%s | reset_at=%s",
                 user.id,
-                user.email,
                 plan,
                 subscription_id,
-                status,
-                price_id
+                user.subscription_status,
+                plan_limits.get(plan, 0),
+                user.monthly_analyses_reset_at
             )
             db.commit()
             return user

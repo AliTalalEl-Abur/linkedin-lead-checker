@@ -185,7 +185,7 @@ python migrations/add_month_key_to_usage_events.py
 python start_server.py
 
 # 3. Verificar límites
-curl -H "Authorization: Bearer <token>" http://localhost:8001/user
+curl -H "Authorization: Bearer <token>" BACKEND_URL/user
 
 # 4. Probar análisis hasta alcanzar límite
 # Debería devolver 429 al llegar al límite

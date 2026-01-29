@@ -67,7 +67,7 @@ echo "🧪 Testing (local):"
 echo "  1. Install: pip install -r requirements.txt"
 echo "  2. Run: python -c 'from app.main import create_app; app = create_app()'"
 echo "  3. Start: uvicorn app.main:app --reload"
-echo "  4. Test health: curl http://localhost:8000/health"
+echo "  4. Test health: curl BACKEND_URL/health"
 
 echo ""
 echo "✅ All checks passed!"

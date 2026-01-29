@@ -7,7 +7,7 @@ Write-Host "=" -repeat 60 -ForegroundColor Gray
 Write-Host ""
 
 # Configuración
-$API_URL = "http://localhost:8000"
+$API_URL = $env:BACKEND_URL
 $HEADERS = @{
     "Content-Type" = "application/json"
 }

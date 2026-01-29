@@ -97,7 +97,7 @@ web/BACK_TO_EXTENSION_IMPLEMENTATION.md ← Documentación completa
 
 1. **Abrir página de success:**
    ```
-   http://localhost:3000/billing/success?session_id=test
+   NEXT_PUBLIC_SITE_URL/billing/success?session_id=test
    ```
 
 2. **Verificar indicadores:**
@@ -116,7 +116,7 @@ web/BACK_TO_EXTENSION_IMPLEMENTATION.md ← Documentación completa
 
 También puedes usar la página de testing dedicada:
 ```
-http://localhost:3000/test-extension-detection.html
+NEXT_PUBLIC_SITE_URL/test-extension-detection.html
 ```
 
 Esta página:
@@ -317,9 +317,9 @@ El sistema "Back to Extension" está **completamente implementado y funcional**.
 1. Configurar el Extension ID (1 minuto)
 2. ¡Listo para usar!
 
-**Servidor corriendo:** http://localhost:3000
+**Servidor corriendo:** NEXT_PUBLIC_SITE_URL
 
 **Test pages:**
-- http://localhost:3000/billing/success?session_id=test
-- http://localhost:3000/billing/cancel
-- http://localhost:3000/test-extension-detection.html
+- NEXT_PUBLIC_SITE_URL/billing/success?session_id=test
+- NEXT_PUBLIC_SITE_URL/billing/cancel
+- NEXT_PUBLIC_SITE_URL/test-extension-detection.html

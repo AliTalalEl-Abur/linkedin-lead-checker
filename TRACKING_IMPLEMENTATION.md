@@ -86,7 +86,7 @@ cd web
 npm run dev
 ```
 
-Abre el navegador en http://localhost:3000 y:
+Abre el navegador en NEXT_PUBLIC_SITE_URL y:
 
 1. **Abre DevTools (F12) → Pestaña Network**
 2. **Click en "Install Chrome Extension"**
@@ -119,7 +119,7 @@ INFO - EVENT_TRACK | waitlist_join | page=landing | ip=127.0.0*** | ua=Mozilla/5
 
 ```bash
 # Test evento de instalación
-curl -X POST http://localhost:8000/events/track \
+curl -X POST BACKEND_URL/events/track \
   -H "Content-Type: application/json" \
   -d '{
     "event": "install_extension_click",
@@ -128,7 +128,7 @@ curl -X POST http://localhost:8000/events/track \
   }'
 
 # Test evento de waitlist
-curl -X POST http://localhost:8000/events/track \
+curl -X POST BACKEND_URL/events/track \
   -H "Content-Type: application/json" \
   -d '{
     "event": "waitlist_join",
@@ -293,7 +293,7 @@ python start_server.py
 cd web
 npm run dev
 
-# Navega a http://localhost:3000
+# Navega a NEXT_PUBLIC_SITE_URL
 # Haz click en los botones
 # Mira los logs en la Terminal 1
 ```

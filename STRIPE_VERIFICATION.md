@@ -21,10 +21,10 @@ python verify_stripe_sync.py
 ### Opción 2: API Endpoint (Opcional)
 ```bash
 # Verificación completa
-curl http://localhost:8000/admin/verify-stripe
+curl BACKEND_URL/admin/verify-stripe
 
 # Health check rápido
-curl http://localhost:8000/admin/stripe-health
+curl BACKEND_URL/admin/stripe-health
 ```
 
 **Ver:** [stripe_verification_endpoint.py](./stripe_verification_endpoint.py) para implementar el endpoint.

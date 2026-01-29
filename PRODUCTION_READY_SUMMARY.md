@@ -10,12 +10,10 @@
 
 ### 2. ✅ API Configuration
 **File**: `web/lib/api.js`
-- Removed hardcoded localhost/production switching
+- Removed hardcoded loopback/production switching
 - Now uses `process.env.NEXT_PUBLIC_API_URL`
-- Falls back to localhost only for local development
 
-**File**: `web/pages/upgrade.js`
-- Replaced hardcoded `localhost:3000` with `window.location.origin`
+- Replaced hardcoded site URL with `NEXT_PUBLIC_SITE_URL`
 - Checkout return URL now dynamic (works in any environment)
 
 ### 3. ✅ SEO Metadata

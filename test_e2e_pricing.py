@@ -1,11 +1,12 @@
 """E2E Testing del nuevo sistema de precios y límites."""
 import subprocess
 import time
+import os
 import requests
 import sys
 from datetime import datetime
 
-BASE_URL = "http://127.0.0.1:8001"
+BASE_URL = os.getenv("BACKEND_URL", "")
 TEST_EMAIL_PREFIX = f"test_{int(time.time())}"
 
 class Colors:
@@ -245,8 +246,8 @@ def run_all_tests():
     
     # Verificar servidor
     if not wait_for_server():
-        print_error("El servidor no está corriendo en http://127.0.0.1:8001")
-        print_info("Inicia el servidor con: python -m uvicorn app.main:application --host 127.0.0.1 --port 8001")
+        print_error("El servidor no está corriendo en BACKEND_URL")
+        print_info("Inicia el servidor con: python -m uvicorn app.main:application --host 0.0.0.0 --port 8001")
         return
     
     results = {}

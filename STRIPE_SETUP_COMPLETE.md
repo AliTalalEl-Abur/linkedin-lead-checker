@@ -170,13 +170,13 @@ python audit_stripe.py
 ### Probar Checkout (después de iniciar backend):
 ```bash
 # Starter Plan
-curl http://localhost:8000/api/billing/checkout?plan=starter
+curl BACKEND_URL/api/billing/checkout?plan=starter
 
 # Pro Plan
-curl http://localhost:8000/api/billing/checkout?plan=pro
+curl BACKEND_URL/api/billing/checkout?plan=pro
 
 # Team Plan
-curl http://localhost:8000/api/billing/checkout?plan=team
+curl BACKEND_URL/api/billing/checkout?plan=team
 ```
 
 ---

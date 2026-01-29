@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 // Extension ID will be constant after publishing to Chrome Web Store
 // For development, this needs to be updated to match the unpacked extension ID
 const EXTENSION_IDS = [
-  'YOUR_EXTENSION_ID_HERE', // Production extension ID (from Chrome Web Store)
+  'mmnmnpcdmgmlpidilffonkafapofekga', // Production extension ID (from Chrome Web Store)
   // Add development extension IDs here if needed
 ];
 
@@ -117,8 +117,7 @@ export function useChromeExtension() {
  * Get the Chrome Web Store URL for the extension
  */
 export function getChromeWebStoreUrl() {
-  // Replace with actual extension ID after publishing
-  return `https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID_HERE`;
+  return process.env.NEXT_PUBLIC_CHROME_WEBSTORE_URL || '';
 }
 
 /**

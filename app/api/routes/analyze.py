@@ -1,7 +1,7 @@
 import logging
 from typing import Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.core.analysis_cache import build_profile_hash, cache_analysis, get_cached_analysis
@@ -21,8 +21,10 @@ from app.schemas.analyze import (
     AnalyzeProfileRequest,
     AnalyzeProfileResponse,
     AnalyzeLinkedInRequest,
+    AnalyzeLinkedInWithModeRequest,
     AnalyzeLinkedInResponse,
     AnalyzeLinkedInUI,
+    AnalyzeStableResponse,
 )
 from app.services import get_ai_service, run_fit, run_decision
 
@@ -46,6 +48,47 @@ FREE_INSIGHTS = [
     "Profile completeness indicates professional communication preference",
     "Industry alignment with typical target market profiles"
 ]
+
+
+def _score_to_stars(score: float) -> int:
+    return max(1, min(5, int(round(score / 20))))
+
+
+def _stable_response(
+    *,
+    mode: str,
+    score: float,
+    insights: list[str],
+    decision: bool,
+    remaining: int | None = None,
+) -> AnalyzeStableResponse:
+    return AnalyzeStableResponse(
+        mode=mode,
+        score=score,
+        stars=_score_to_stars(score),
+        insights=insights,
+        decision=decision,
+        remaining=remaining,
+    )
+
+
+def _preview_stable_response(profile: dict, user: User) -> AnalyzeStableResponse:
+    import random
+
+    base_score = 65.0 + (hash(str(profile)) % 16)
+    selected_insights = random.sample(FREE_INSIGHTS, min(3, len(FREE_INSIGHTS)))
+    logger.info(
+        "Preview response generated (no AI call): user_id=%d, plan=%s",
+        user.id,
+        user.plan,
+    )
+    return _stable_response(
+        mode="preview",
+        score=base_score,
+        insights=selected_insights,
+        decision=True,
+        remaining=None,
+    )
 
 
 def _extract_identity(profile_data: dict) -> Tuple[str, str]:
@@ -270,6 +313,141 @@ def _preview_linkedin_response(profile: dict, user: User, message: str, preview_
         preview=True,
         message=message,
         cache_hit=False,
+    )
+
+
+@router.post("", response_model=AnalyzeStableResponse, summary="Analyze LinkedIn profile with mode")
+def analyze_linkedin_with_mode(
+    request: AnalyzeLinkedInWithModeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    http_request: Request | None = None,
+):
+    """Analyze LinkedIn data with explicit mode: preview or ai."""
+    request_id = getattr(getattr(http_request, "state", None), "request_id", "unknown")
+    logger.info(
+        "ANALYZE_REQUEST | request_id=%s | user_id=%d | mode=%s",
+        request_id,
+        current_user.id,
+        request.mode,
+    )
+    profile = request.profile_extract or {}
+    if request.profile_url:
+        profile.setdefault("profile_url", request.profile_url)
+
+    if request.mode == "preview":
+        return _preview_stable_response(profile, current_user)
+
+    settings = get_settings()
+    if settings.disable_all_analyses:
+        logger.warning("KILL SWITCH TRIGGERED: All analyses disabled (user_id=%d)", current_user.id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Analysis service temporarily disabled. Please try again later.",
+        )
+
+    if not settings.openai_enabled:
+        logger.warning(
+            "AI_CALL_BLOCKED_OPENAI_DISABLED: user_id=%d, plan=%s",
+            current_user.id,
+            current_user.plan,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service is currently disabled. Please try again later.",
+        )
+
+    paid_plans = {"starter", "pro", "team", "business"}
+    active_statuses = {"active", "trialing"}
+    if current_user.plan not in paid_plans or current_user.subscription_status not in active_statuses:
+        logger.warning(
+            "AI_CALL_BLOCKED_NO_SUBSCRIPTION: user_id=%d, plan=%s, status=%s",
+            current_user.id,
+            current_user.plan,
+            current_user.subscription_status,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="Active subscription required to run AI analysis.",
+        )
+
+    usage_stats = get_usage_stats(current_user, db)
+    if usage_stats["remaining"] <= 0:
+        logger.warning(
+            "AI_CALL_BLOCKED_LIMIT_REACHED: user_id=%d, plan=%s, used=%d, limit=%d",
+            current_user.id,
+            current_user.plan,
+            usage_stats["used"],
+            usage_stats["limit"],
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="You've reached your monthly AI analysis limit.",
+        )
+
+    check_usage_limit(current_user, db)
+
+    if current_user.icp_config_json:
+        icp_config = ICPConfig(**current_user.icp_config_json)
+    else:
+        icp_config = ICPConfig(
+            target_industries=None,
+            target_seniority=None,
+            company_size_min=0,
+            company_size_max=1_000_000,
+            required_skills=[],
+            min_years_experience=0,
+            target_locations=None,
+            exclude_keywords=None,
+        )
+
+    logger.info(
+        "AI_CALL_APPROVED: Starting LinkedIn analysis (user_id=%d, plan=%s, remaining=%d)",
+        current_user.id,
+        current_user.plan,
+        usage_stats["remaining"],
+    )
+
+    try:
+        fit = run_fit(profile, icp_config)
+        decision = run_decision(fit, profile)
+    except RuntimeError as e:
+        logger.error("OpenAI API error for user_id=%d: %s", current_user.id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI service temporarily unavailable. Please try again in a few moments.",
+        )
+    except ValueError as e:
+        logger.error("Invalid AI response for user_id=%d: %s", current_user.id, str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI service returned invalid response. Please try again.",
+        )
+    except Exception as e:
+        logger.error(
+            "Unexpected error in LinkedIn analysis for user_id=%d: %s",
+            current_user.id,
+            str(e),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred. Please try again.",
+        )
+
+    record_usage(current_user, db, cost_usd=settings.ai_cost_per_analysis_usd)
+    updated_usage = get_usage_stats(current_user, db)
+
+    insights = list(decision.key_points or [])
+    if not insights and decision.reasoning:
+        insights = [decision.reasoning]
+
+    return _stable_response(
+        mode="ai",
+        score=decision.score,
+        insights=insights,
+        decision=decision.should_contact,
+        remaining=updated_usage["remaining"],
     )
 
 

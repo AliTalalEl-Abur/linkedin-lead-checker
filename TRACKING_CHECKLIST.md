@@ -17,7 +17,7 @@ npm run dev
 ---
 
 ### Paso 2: Abrir Navegador
-1. Abre http://localhost:3000
+1. Abre NEXT_PUBLIC_SITE_URL
 2. Abre DevTools (F12)
 3. Ve a la pestaña **Network**
 4. Filtra por: `/events`

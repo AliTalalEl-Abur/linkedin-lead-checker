@@ -30,7 +30,7 @@ STEP 2: LOGIN
   - popup.js transitions to "Analyze" section
   
   API CALL:
-    POST http://127.0.0.1:8000/auth/login
+    POST BACKEND_URL/auth/login
     Body: { email: "user@example.com" }
     Response: { access_token: "eyJhbGc..." }
 
@@ -62,7 +62,7 @@ STEP 4: SEND TO BACKEND
     - Return results
   
   API CALL:
-    POST http://127.0.0.1:8000/analyze/linkedin
+    POST BACKEND_URL/analyze/linkedin
     Headers: { Authorization: "Bearer <token>" }
     Body: { profile_extract: {...} }
     Response: {
@@ -134,7 +134,7 @@ chrome.storage.local.remove(["authToken"], () => {
 /*
 LOGIN ERRORS:
   - Invalid email format → "Please enter a valid email address"
-  - Network error → "Could not reach server at http://127.0.0.1:8000"
+  - Network error → "Could not reach server at BACKEND_URL"
   - Server error → Display error from API response
 
 EXTRACTION ERRORS:

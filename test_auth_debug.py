@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 from jose import jwt
@@ -7,7 +8,8 @@ print("🔍 Diagnóstico de Autenticación\n")
 
 # 1. Login
 print("1. Realizando login...")
-resp = requests.post('http://127.0.0.1:8001/auth/login', json={'email': 'test_complete@example.com'})
+base_url = os.getenv("BACKEND_URL", "")
+resp = requests.post(f"{base_url}/auth/login", json={'email': 'test_complete@example.com'})
 print(f"   Status: {resp.status_code}")
 token_data = resp.json()
 token = token_data['access_token']
@@ -39,7 +41,7 @@ else:
 # 4. Llamar a /user
 print("\n4. Llamando a GET /user...")
 headers = {'Authorization': f'Bearer {token}'}
-resp_user = requests.get('http://127.0.0.1:8001/user', headers=headers)
+resp_user = requests.get(f"{base_url}/user", headers=headers)
 print(f"   Status: {resp_user.status_code}")
 if resp_user.status_code == 200:
     print(f"   ✅ Response: {resp_user.json()}")

@@ -13,7 +13,7 @@
 - [ ] **Test Locally**
   ```bash
   npm run dev
-  # Visit http://localhost:3000
+  # Visit NEXT_PUBLIC_SITE_URL
   ```
 
 - [ ] **Test Responsive Design**

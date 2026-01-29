@@ -10,7 +10,7 @@
 - ✅ `public/sitemap.xml` - Sitemap for search engines
 
 ### Code Changes
-- ✅ Removed hardcoded localhost references
+- ✅ Removed hardcoded loopback references
 - ✅ Uses `NEXT_PUBLIC_API_URL` from environment
 - ✅ Dynamic checkout return URL (uses `window.location.origin`)
 - ✅ SEO metadata (title, description, Open Graph, Twitter Cards)
@@ -78,7 +78,7 @@ NEXT_PUBLIC_API_URL=https://linkedin-lead-checker-api-preview.onrender.com
 
 **Development:**
 ```
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL
 ```
 
 ### 5. Update Domain-Specific Files

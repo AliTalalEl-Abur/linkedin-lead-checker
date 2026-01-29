@@ -177,7 +177,7 @@ cd web
 npm run dev
 
 # 3. Verifica en el navegador
-# Abre: http://localhost:3000
+# Abre: NEXT_PUBLIC_SITE_URL
 # DevTools → Network → Click en botones CTA
 # Busca: POST /events/track
 

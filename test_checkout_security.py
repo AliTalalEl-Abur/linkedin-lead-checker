@@ -10,13 +10,14 @@ Tests all security validations:
 6. Proper error handling
 """
 
+import os
 import requests
 import json
 from dotenv import load_dotenv
 
 load_dotenv()
 
-API_BASE = "http://127.0.0.1:8000"
+API_BASE = os.getenv("BACKEND_URL", "")
 
 def print_test(name, description=""):
     print(f"\n{'='*80}")
@@ -45,7 +46,7 @@ def test_no_authentication():
     response = requests.post(
         f"{API_BASE}/billing/checkout",
         json={
-            "return_url": "http://localhost:3000/return?session_id={{CHECKOUT_SESSION_ID}}",
+            "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/return?session_id={{CHECKOUT_SESSION_ID}}",
             "plan": "pro"
         }
     )
@@ -81,7 +82,7 @@ def test_invalid_plans(token):
         response = requests.post(
             f"{API_BASE}/billing/checkout",
             json={
-                "return_url": "http://localhost:3000/return?session_id={{CHECKOUT_SESSION_ID}}",
+                "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/return?session_id={{CHECKOUT_SESSION_ID}}",
                 "plan": plan
             },
             headers={"Authorization": f"Bearer {token}"}
@@ -109,7 +110,7 @@ def test_valid_plans(token):
         response = requests.post(
             f"{API_BASE}/billing/checkout",
             json={
-                "return_url": f"http://localhost:3000/return?session_id={{CHECKOUT_SESSION_ID}}",
+                "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/return?session_id={{CHECKOUT_SESSION_ID}}",
                 "plan": plan
             },
             headers={"Authorization": f"Bearer {token}"}
@@ -166,7 +167,7 @@ def test_invalid_return_url(token):
     response = requests.post(
         f"{API_BASE}/billing/checkout",
         json={
-            "return_url": "http://localhost:3000/return",  # Missing placeholder
+            "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/return",  # Missing placeholder
             "plan": "pro"
         },
         headers={"Authorization": f"Bearer {token}"}
@@ -189,7 +190,7 @@ def test_metadata_in_session(token):
     response = requests.post(
         f"{API_BASE}/billing/checkout",
         json={
-            "return_url": "http://localhost:3000/return?session_id={{CHECKOUT_SESSION_ID}}",
+            "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/return?session_id={{CHECKOUT_SESSION_ID}}",
             "plan": "pro"
         },
         headers={"Authorization": f"Bearer {token}"}
@@ -222,7 +223,7 @@ def test_case_insensitive_plans(token):
         response = requests.post(
             f"{API_BASE}/billing/checkout",
             json={
-                "return_url": "http://localhost:3000/return?session_id={{CHECKOUT_SESSION_ID}}",
+                "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/return?session_id={{CHECKOUT_SESSION_ID}}",
                 "plan": plan_variant
             },
             headers={"Authorization": f"Bearer {token}"}

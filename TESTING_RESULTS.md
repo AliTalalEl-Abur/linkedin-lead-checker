@@ -122,7 +122,7 @@ El sistema de tracking de uso funciona correctamente:
 $env:DATABASE_URL=$null
 
 # 2. Iniciar servidor
-python -m uvicorn app.main:application --host 127.0.0.1 --port 8001 --reload
+python -m uvicorn app.main:application --host 0.0.0.0 --port 8001 --reload
 
 # 3. Abrir dashboard
 Start-Process chrome "file:///C:/Users/LENOVO/Desktop/linkedin-lead-checker/web/dashboard.html"
@@ -139,7 +139,7 @@ Start-Process chrome "file:///C:/Users/LENOVO/Desktop/linkedin-lead-checker/web/
 ### Opción 2: Testing con Postman/Insomnia
 
 ```
-POST http://127.0.0.1:8001/auth/login
+POST BACKEND_URL/auth/login
 {
   "email": "test@example.com",
   "password": "pass",
@@ -148,7 +148,7 @@ POST http://127.0.0.1:8001/auth/login
 
 # Guardar access_token
 
-POST http://127.0.0.1:8001/analyze/linkedin
+POST BACKEND_URL/analyze/linkedin
 Headers: Authorization: Bearer {token}
 {
   "profile_extract": {
@@ -169,10 +169,10 @@ Headers: Authorization: Bearer {token}
 ```powershell
 # Terminal 1: Backend
 $env:DATABASE_URL=$null
-python -m uvicorn app.main:application --host 127.0.0.1 --port 8001
+python -m uvicorn app.main:application --host 0.0.0.0 --port 8001
 
 # Terminal 2: Stripe Webhooks
-stripe listen --forward-to http://127.0.0.1:8001/billing/webhook
+stripe listen --forward-to BACKEND_URL/billing/webhook
 
 # Terminal 3: Trigger checkout
 # (Usar dashboard web para esto)

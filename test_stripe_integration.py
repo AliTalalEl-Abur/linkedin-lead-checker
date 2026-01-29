@@ -195,7 +195,7 @@ def main():
         print("   - STRIPE_PRO_PRICE_ID=price_...")
         print("2. Start the backend: uvicorn app.main:app --reload")
         print("3. Start the frontend: cd web && npm run dev")
-        print("4. Visit http://localhost:3000/dashboard")
+        print("4. Visit NEXT_PUBLIC_SITE_URL/dashboard")
         print("5. Click 'Upgrade to Pro' to test the flow")
         return 0
     else:

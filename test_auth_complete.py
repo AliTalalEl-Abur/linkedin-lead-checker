@@ -2,9 +2,10 @@
 """Simple test script to verify auth endpoints"""
 import sys
 import time
+import os
 import requests
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.getenv("BACKEND_URL", "")
 
 def wait_for_server():
     """Wait for server to be ready"""

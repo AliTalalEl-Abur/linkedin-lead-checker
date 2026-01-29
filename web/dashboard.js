@@ -2,7 +2,7 @@
  * Dashboard JavaScript - Client-side logic for web dashboard
  */
 
-const API_BASE = 'http://127.0.0.1:8001';
+const API_BASE = window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_URL;
 
 const elements = {
   authSection: document.getElementById('authSection'),
@@ -40,6 +40,12 @@ const elements = {
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (!API_BASE) {
+    showAuthSection();
+    showAuthStatus('API URL is not configured. Please contact support.', 'error');
+    return;
+  }
+
   const token = getToken();
   
   if (token) {
@@ -282,7 +288,7 @@ if (elements.upgradeButtons && elements.upgradeButtons.length) {
             'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
-            return_url: `${window.location.origin}/billing-return.html?session_id={CHECKOUT_SESSION_ID}`,
+            return_url: `${(window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.SITE_URL) || ''}/billing-return.html?session_id={CHECKOUT_SESSION_ID}`,
             plan,
           }),
         });

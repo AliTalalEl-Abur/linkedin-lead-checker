@@ -5,6 +5,7 @@ import styles from '../styles/Dashboard.module.css';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
   const [loading, setLoading] = useState(true);
   const [userPlan, setUserPlan] = useState('free');
   const [usageStats, setUsageStats] = useState(null);
@@ -12,7 +13,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const token = getStoredToken();
     if (!token) {
-      router.push('/login');
+      window.location.href = `${siteUrl}/login`;
     } else {
       fetchUserProfile();
     }
@@ -38,7 +39,7 @@ export default function DashboardPage() {
 
   const handleLogout = () => {
     clearToken();
-    router.push('/login');
+    window.location.href = `${siteUrl}/login`;
   };
 
   if (loading) {
@@ -71,7 +72,7 @@ export default function DashboardPage() {
 
         {userPlan === 'free' && (
           <button 
-            onClick={() => router.push('/upgrade')}
+            onClick={() => window.location.href = `${siteUrl}/upgrade`}
             className={styles.upgradeButton}
           >
             🚀 Upgrade to Pro
@@ -90,7 +91,7 @@ export default function DashboardPage() {
 
 
         <button
-          onClick={() => router.push('/onboarding')}
+          onClick={() => window.location.href = `${siteUrl}/onboarding`}
           className={styles.secondaryBtn}
         >
           Edit ICP

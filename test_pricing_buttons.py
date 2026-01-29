@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-API_BASE = "http://127.0.0.1:8000"
+API_BASE = os.getenv("BACKEND_URL", "")
 
 def print_header(text):
     print(f"\n{'='*80}")
@@ -28,7 +28,7 @@ def test_unauthenticated_checkout():
     response = requests.post(
         f"{API_BASE}/billing/checkout",
         json={
-            "return_url": "http://localhost:3000/billing-return.html?session_id={{CHECKOUT_SESSION_ID}}",
+            "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/billing-return.html?session_id={{CHECKOUT_SESSION_ID}}",
             "plan": "pro"
         }
     )
@@ -66,7 +66,7 @@ def test_checkout_for_plan(token, plan):
     response = requests.post(
         f"{API_BASE}/billing/checkout",
         json={
-            "return_url": f"http://localhost:3000/billing-return.html?session_id={{CHECKOUT_SESSION_ID}}",
+            "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/billing-return.html?session_id={{CHECKOUT_SESSION_ID}}",
             "plan": plan
         },
         headers={"Authorization": f"Bearer {token}"}
@@ -93,7 +93,7 @@ def test_invalid_plan(token):
     response = requests.post(
         f"{API_BASE}/billing/checkout",
         json={
-            "return_url": "http://localhost:3000/billing-return.html?session_id={{CHECKOUT_SESSION_ID}}",
+            "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/billing-return.html?session_id={{CHECKOUT_SESSION_ID}}",
             "plan": "premium"  # Invalid plan
         },
         headers={"Authorization": f"Bearer {token}"}
@@ -176,7 +176,7 @@ def main():
         print("✅ ALL TESTS PASSED!")
         print("\n📝 Next Steps:")
         print("1. Start your Next.js frontend: cd web && npm run dev")
-        print("2. Test the pricing buttons in browser at http://localhost:3000")
+        print("2. Test the pricing buttons in browser at NEXT_PUBLIC_SITE_URL")
         print("3. Click 'Get Started' → Login → Click plan button")
         print("4. You should be redirected to Stripe Checkout")
         print("5. Test card: 4242 4242 4242 4242")

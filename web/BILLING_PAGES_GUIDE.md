@@ -5,10 +5,10 @@
 Se han creado dos páginas para manejar el retorno del proceso de checkout de Stripe:
 
 ### 1. `/billing/success` - Pago Exitoso
-**Ruta:** `http://localhost:3000/billing/success?session_id=XXX`
+**Ruta:** `NEXT_PUBLIC_SITE_URL/billing/success?session_id=XXX`
 
 ### 2. `/billing/cancel` - Pago Cancelado
-**Ruta:** `http://localhost:3000/billing/cancel`
+**Ruta:** `NEXT_PUBLIC_SITE_URL/billing/cancel`
 
 ---
 
@@ -126,10 +126,10 @@ Se han creado dos páginas para manejar el retorno del proceso de checkout de St
 
 ```bash
 # Abrir en navegador
-http://localhost:3000/billing/success?session_id=cs_test_123456789
+NEXT_PUBLIC_SITE_URL/billing/success?session_id=cs_test_123456789
 
 # Con autenticación:
-# 1. Login primero en http://localhost:3000/login
+# 1. Login primero en NEXT_PUBLIC_SITE_URL/login
 # 2. Luego navegar a la URL de success
 ```
 
@@ -143,7 +143,7 @@ http://localhost:3000/billing/success?session_id=cs_test_123456789
 
 ```bash
 # Abrir en navegador
-http://localhost:3000/billing/cancel
+NEXT_PUBLIC_SITE_URL/billing/cancel
 ```
 
 **Resultado esperado:**

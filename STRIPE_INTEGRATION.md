@@ -79,7 +79,7 @@ STRIPE_WEBHOOK_SECRET=whsec_test_your_webhook_secret_here
 STRIPE_PRO_PRICE_ID=price_your_price_id_here
 
 # Frontend
-NEXT_PUBLIC_CHECKOUT_RETURN_URL=http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}
+NEXT_PUBLIC_CHECKOUT_RETURN_URL=NEXT_PUBLIC_SITE_URL/checkout-result?session_id={CHECKOUT_SESSION_ID}
 ```
 
 ### 4. Start Backend
@@ -94,10 +94,10 @@ uvicorn app.main:app --reload --port 8000
 
 Verify Stripe routes work:
 ```bash
-curl -X POST http://127.0.0.1:8000/billing/checkout \
+curl -X POST BACKEND_URL/billing/checkout \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"return_url": "http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}"}'
+  -d '{"return_url": "NEXT_PUBLIC_SITE_URL/checkout-result?session_id={CHECKOUT_SESSION_ID}"}'
 ```
 
 Expected response:
@@ -116,7 +116,7 @@ npm install
 npm run dev
 ```
 
-Visit `http://localhost:3000` in browser.
+Visit `NEXT_PUBLIC_SITE_URL` in browser.
 
 ### 6. Test Webhook Locally (Optional)
 
@@ -125,7 +125,7 @@ Use **Stripe CLI** to forward webhooks to your local server:
 ```bash
 # Install Stripe CLI: https://stripe.com/docs/stripe-cli
 stripe login  # authenticate with your Stripe account
-stripe listen --forward-to localhost:8000/api/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/api/billing/webhook/stripe
 
 # In another terminal, trigger test event:
 stripe trigger checkout.session.completed
@@ -139,7 +139,7 @@ Create Stripe checkout session for authenticated user.
 **Request:**
 ```json
 {
-  "return_url": "http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}"
+  "return_url": "NEXT_PUBLIC_SITE_URL/checkout-result?session_id={CHECKOUT_SESSION_ID}"
 }
 ```
 
@@ -221,7 +221,7 @@ class User:
 ### /upgrade
 Button page for initiating checkout.
 ```bash
-http://localhost:3000/upgrade
+NEXT_PUBLIC_SITE_URL/upgrade
 ```
 
 - Shows Pro plan benefits
@@ -232,7 +232,7 @@ http://localhost:3000/upgrade
 ### /checkout-result
 Results page after Stripe checkout.
 ```bash
-http://localhost:3000/checkout-result?session_id=cs_test_xxx&status=success
+NEXT_PUBLIC_SITE_URL/checkout-result?session_id=cs_test_xxx&status=success
 ```
 
 - Shows success/cancel message
@@ -242,7 +242,7 @@ http://localhost:3000/checkout-result?session_id=cs_test_xxx&status=success
 ### /dashboard
 Main dashboard showing user's plan.
 ```bash
-http://localhost:3000/dashboard
+NEXT_PUBLIC_SITE_URL/dashboard
 ```
 
 - Displays current plan (Free/Pro badge)
@@ -289,7 +289,7 @@ http://localhost:3000/dashboard
 
 ### Webhook not firing
 - Use Stripe CLI to test: `stripe trigger checkout.session.completed`
-- Verify endpoint URL is publicly accessible (not localhost)
+- Verify endpoint URL is publicly accessible (not loopback)
 - Check webhook event list in Stripe dashboard for failures
 
 ---
@@ -331,28 +331,28 @@ http://localhost:3000/dashboard
 
 ```bash
 # 1. Login (get JWT token)
-curl -X POST http://127.0.0.1:8000/auth/login \
+curl -X POST BACKEND_URL/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email": "user@example.com"}'
 # Response: {"access_token": "eyJ0eX...", "token_type": "bearer"}
 
 # 2. Create checkout session
 TOKEN="eyJ0eX..."
-curl -X POST http://127.0.0.1:8000/billing/checkout \
+curl -X POST BACKEND_URL/billing/checkout \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"return_url": "http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}"}'
+  -d '{"return_url": "NEXT_PUBLIC_SITE_URL/checkout-result?session_id={CHECKOUT_SESSION_ID}"}'
 # Response: {"sessionId": "cs_test_xxx", "url": "https://checkout.stripe.com/..."}
 
 # 3. Simulate webhook (local testing only)
-curl -X POST http://127.0.0.1:8000/billing/webhook/stripe \
+curl -X POST BACKEND_URL/billing/webhook/stripe \
   -H "stripe-signature: t=123,v1=abc" \
   -H "Content-Type: application/json" \
   -d '{"type":"checkout.session.completed","data":{"object":{"client_reference_id":"1","customer":"cus_test","subscription":"sub_test"}}}'
 # Note: This will fail signature verification - use Stripe CLI for real testing
 
 # 4. Check user upgraded
-curl -X GET http://127.0.0.1:8000/user \
+curl -X GET BACKEND_URL/user \
   -H "Authorization: Bearer $TOKEN"
 # Response: {"id": 1, "email": "user@example.com", "plan": "pro", ...}
 ```

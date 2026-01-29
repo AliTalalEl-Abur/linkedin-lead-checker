@@ -460,7 +460,7 @@ def main():
     print("   1. Copy the price IDs above to your .env file")
     print("   2. Check STRIPE_IDS.md for complete documentation")
     print("   3. Restart your backend server")
-    print("   4. Test checkout flow: http://localhost:8000/billing/checkout?plan=pro")
+    print("   4. Test checkout flow: BACKEND_URL/billing/checkout?plan=pro")
     print("   5. Configure webhook endpoint in Stripe Dashboard:")
     print("      https://dashboard.stripe.com/webhooks")
     print("      Endpoint: https://your-domain.com/billing/webhook/stripe")

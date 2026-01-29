@@ -256,23 +256,53 @@
     </div>
 
     <script>
-      function selectPlan(plan) {
-        // Get the backend URL from storage or use default
-        chrome.storage.local.get(['access_token'], (result) => {
+      const API_BASE_URL = 'BACKEND_URL';
+      const WEB_URL = 'NEXT_PUBLIC_SITE_URL';
+
+      async function selectPlan(plan) {
+        try {
+          // Get token from storage
+          const result = await chrome.storage.local.get(['access_token']);
+          
           if (!result.access_token) {
             alert('Please login first');
             window.close();
             return;
           }
 
-          // Open billing page with plan selection
-          const backendUrl = 'http://127.0.0.1:8001'; // TODO: Get from config
-          const billingUrl = `${backendUrl}/billing/checkout?plan=${plan}`;
-          
-          chrome.tabs.create({ url: billingUrl }, () => {
-            window.close();
+          // Call backend to create checkout session
+          const response = await fetch(`${API_BASE_URL}/billing/checkout`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${result.access_token}`
+            },
+            body: JSON.stringify({
+              plan: plan,
+              return_url: `${WEB_URL}/billing-return?session_id={CHECKOUT_SESSION_ID}`
+            })
           });
-        });
+
+          if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            alert(error.detail || 'Failed to create checkout session');
+            return;
+          }
+
+          const data = await response.json();
+          
+          // Redirect to Stripe checkout
+          if (data.url) {
+            chrome.tabs.create({ url: data.url }, () => {
+              window.close();
+            });
+          } else {
+            alert('Invalid checkout URL received');
+          }
+        } catch (error) {
+          console.error('Checkout error:', error);
+          alert('Failed to start checkout. Please try again.');
+        }
       }
 
       function goBack() {

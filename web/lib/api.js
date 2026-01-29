@@ -1,9 +1,15 @@
 /**
  * API Configuration
- * Uses NEXT_PUBLIC_API_URL from environment variables
- * Falls back to localhost for local development
+ * Uses NEXT_PUBLIC_API_URL from environment variables (required in production)
  */
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+function getApiUrl() {
+  if (!API_URL) {
+    throw new Error('NEXT_PUBLIC_API_URL is not set');
+  }
+  return API_URL;
+}
 
 /**
  * Validate email format
@@ -41,7 +47,7 @@ export function clearToken() {
  * Returns: { access_token, token_type }
  */
 export async function login(email) {
-  const response = await fetch(`${API_URL}/auth/login`, {
+  const response = await fetch(`${getApiUrl()}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -71,7 +77,7 @@ export async function authenticatedFetch(endpoint, options = {}) {
     throw new Error("Not authenticated. Please login first.");
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(`${getApiUrl()}${endpoint}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",

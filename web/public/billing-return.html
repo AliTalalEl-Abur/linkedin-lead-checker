@@ -146,24 +146,32 @@
         <p id="message">Estamos activando tu suscripción. Esto tomará solo unos segundos.</p>
         <div class="status" id="status"></div>
         <div id="planBadge"></div>
-        <a href="/" class="cta-button" id="ctaButton" style="display: none;">Comenzar a Usar</a>
+        <a href="#" class="cta-button" id="ctaButton" style="display: none;">Comenzar a Usar</a>
     </div>
 
+    <script src="/runtime-env.js"></script>
     <script>
-        const API_BASE = 'http://localhost:8000';
+        const API_BASE = window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_URL;
+        const SITE_URL = window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.SITE_URL;
         
         // Get session_id from URL
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
 
-        if (!sessionId) {
+        if (SITE_URL) {
+            document.getElementById('ctaButton').href = SITE_URL;
+        }
+
+        if (!API_BASE) {
+            showError('API URL no configurada. Contacta soporte.');
+        } else if (!sessionId) {
             showError('No se encontró ID de sesión. Por favor contacta soporte.');
         } else {
             checkSubscriptionStatus();
         }
 
         async function checkSubscriptionStatus() {
-            const token = localStorage.getItem('token');
+            const token = localStorage.getItem('authToken');
             
             if (!token) {
                 showError('No estás autenticado. Por favor inicia sesión.');

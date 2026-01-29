@@ -19,7 +19,7 @@ A Next.js web application for user authentication, ICP configuration, and profil
 ### Prerequisites
 
 - Node.js 18+ installed
-- Backend API running on `http://127.0.0.1:8000`
+- Backend API running on `NEXT_PUBLIC_API_URL`
 
 ### Installation
 
@@ -29,14 +29,14 @@ cd web
 # Install dependencies
 npm install
 
-# Set API URL (optional, defaults to http://127.0.0.1:8000)
-export NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+# Set API URL
+export NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL
 
 # Start dev server
 npm run dev
 ```
 
-The app will be available at `http://localhost:3000`
+The app will be available at `NEXT_PUBLIC_SITE_URL`
 
 ## Project Structure
 
@@ -66,7 +66,7 @@ web/
 ### User Journey
 
 ```
-1. User visits http://localhost:3000
+1. User visits NEXT_PUBLIC_SITE_URL
    → Redirects to /login (if not authenticated)
 
 2. User enters email and clicks "Login"
@@ -148,7 +148,7 @@ The backend needs to implement:
 ## Environment Variables
 
 ```
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000  # Backend API URL
+NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL  # Backend API URL
 ```
 
 ## Next Steps (Future)

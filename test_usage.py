@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Test usage control and limits"""
+import os
 import requests
 import sys
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.getenv("BACKEND_URL", "")
 
 def test_usage_control():
     """Test usage limits for free and pro users"""

@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -11,14 +13,30 @@ from app.models.user import User
 from app.schemas.auth import LoginRequest, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
+
+
+def _mask_email(email: str) -> str:
+    if not email or "@" not in email:
+        return "redacted"
+    name, domain = email.split("@", 1)
+    if not name:
+        return f"***@{domain}"
+    return f"{name[0]}***@{domain}"
 
 
 @router.post("/login", response_model=TokenResponse, summary="User authentication")
-def login(request: LoginRequest, db: Session = Depends(get_db)):
+def login(request: LoginRequest, db: Session = Depends(get_db), http_request: Request | None = None):
     """
     Authenticate user and return access token.
     Creates new account if email doesn't exist (subject to registration limits).
     """
+    request_id = getattr(getattr(http_request, "state", None), "request_id", "unknown")
+    logger.info(
+        "AUTH_LOGIN_ATTEMPT | request_id=%s | email=%s",
+        request_id,
+        _mask_email(request.email),
+    )
     settings = get_settings()
     
     # Check if user exists
@@ -52,6 +70,12 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
     # Create JWT token
     access_token = create_access_token(
         data={"sub": user.id, "email": user.email}
+    )
+
+    logger.info(
+        "AUTH_LOGIN_SUCCESS | request_id=%s | user_id=%s",
+        request_id,
+        user.id,
     )
     
     return TokenResponse(access_token=access_token)

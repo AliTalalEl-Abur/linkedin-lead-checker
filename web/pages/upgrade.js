@@ -5,6 +5,7 @@ import { authenticatedFetch, getStoredToken, clearToken } from '../lib/api';
 
 export default function Upgrade() {
   const router = useRouter();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -12,7 +13,7 @@ export default function Upgrade() {
     // Check if user is authenticated
     const token = getStoredToken();
     if (!token) {
-      router.push('/login');
+      window.location.href = `${siteUrl}/login`;
     }
   }, [router]);
 
@@ -21,36 +22,34 @@ export default function Upgrade() {
     setError('');
 
     try {
-      // Get return URL from environment or construct from current location
-      const returnUrl = process.env.NEXT_PUBLIC_CHECKOUT_RETURN_URL || 
-        `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}/checkout-result?session_id={CHECKOUT_SESSION_ID}`;
+      // Get return URL from environment (required in production)
+      const returnUrl = process.env.NEXT_PUBLIC_CHECKOUT_RETURN_URL;
+      if (!returnUrl) {
+        throw new Error('NEXT_PUBLIC_CHECKOUT_RETURN_URL is not set');
+      }
 
-      const response = await authenticatedFetch('/billing/checkout', {
+      const data = await authenticatedFetch('/billing/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ return_url: returnUrl }),
       });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          clearToken();
-          router.push('/login');
-          return;
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to create checkout session');
-      }
-
-      const data = await response.json();
       
       // Redirect to Stripe checkout
       if (data.url) {
         window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      const message = err instanceof Error ? err.message : 'Something went wrong';
+      if (message.includes('Session expired') || message.includes('Not authenticated')) {
+        clearToken();
+        window.location.href = `${siteUrl}/login`;
+        return;
+      }
+      setError(message);
       setLoading(false);
     }
   };
@@ -82,7 +81,7 @@ export default function Upgrade() {
         </button>
 
         <button 
-          onClick={() => router.push('/dashboard')}
+          onClick={() => window.location.href = `${siteUrl}/dashboard`}
           className={styles.secondaryButton}
         >
           Back to Dashboard

@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_BASE = "http://127.0.0.1:8000"
+API_BASE = os.getenv("BACKEND_URL", "")
 
 def print_header(text):
     print(f"\n{'='*80}")
@@ -60,7 +60,7 @@ def create_checkout(token, plan="pro"):
     response = requests.post(
         f"{API_BASE}/billing/checkout",
         json={
-            "return_url": f"http://localhost:3000/return?session_id={{CHECKOUT_SESSION_ID}}",
+            "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/return?session_id={{CHECKOUT_SESSION_ID}}",
             "plan": plan
         },
         headers={"Authorization": f"Bearer {token}"}

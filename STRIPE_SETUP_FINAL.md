@@ -38,7 +38,7 @@ https://dashboard.stripe.com/webhooks
 ### 3. Configura el endpoint:
 
 **Endpoint URL**:
-- **Local testing**: `http://localhost:8000/billing/webhook/stripe`
+- **Webhook URL**: `BACKEND_URL/billing/webhook/stripe`
 - **Render production**: `https://linkedin-lead-checker-api.onrender.com/billing/webhook/stripe`
 - **Vercel/otro**: `https://tu-dominio.com/billing/webhook/stripe`
 
@@ -87,11 +87,11 @@ scoop install stripe
 # https://github.com/stripe/stripe-cli/releases
 ```
 
-### Forward webhooks a localhost:
+### Forward webhooks:
 
 ```powershell
 stripe login
-stripe listen --forward-to localhost:8000/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/billing/webhook/stripe
 ```
 
 Esto te dará un webhook secret temporal que puedes usar en `.env` local.
@@ -186,10 +186,10 @@ python -c "from app.core.config import get_settings; s=get_settings(); print(f'S
 
 ```powershell
 # Con curl (Windows):
-curl -X POST http://localhost:8000/billing/checkout `
+curl -X POST BACKEND_URL/billing/checkout `
   -H "Content-Type: application/json" `
   -H "Authorization: Bearer YOUR_JWT_TOKEN" `
-  -d '{"plan":"pro","return_url":"http://localhost:3000/checkout?session_id={CHECKOUT_SESSION_ID}"}'
+  -d '{"plan":"pro","return_url":"NEXT_PUBLIC_SITE_URL/checkout?session_id={CHECKOUT_SESSION_ID}"}'
 ```
 
 ---

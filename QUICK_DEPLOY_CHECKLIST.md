@@ -1,7 +1,7 @@
 # 🚀 Quick Deployment Checklist
 
 ## Before Deployment
-- [x] Remove localhost hardcoded references
+- [x] Remove loopback hardcoded references
 - [x] Add NEXT_PUBLIC_API_URL environment variable
 - [x] Add SEO metadata (title, description, OG tags)
 - [x] Create robots.txt

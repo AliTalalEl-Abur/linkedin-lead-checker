@@ -104,19 +104,28 @@
       <h1>Payment Successful!</h1>
       <p>Your account has been upgraded to Pro.</p>
       <p>You now have <strong>500 profile analyses per week</strong>.</p>
-      <a href="dashboard.html" class="btn">Go to Dashboard</a>
+      <a href="#" class="btn" id="successCta">Go to Dashboard</a>
     </div>
     
     <div id="error" class="hidden">
       <div class="error">✗</div>
       <h1>Payment Failed</h1>
       <p id="errorMessage">Something went wrong with your payment.</p>
-      <a href="dashboard.html" class="btn">Back to Dashboard</a>
+      <a href="#" class="btn" id="errorCta">Back to Dashboard</a>
     </div>
   </div>
   
+  <script src="runtime-env.js"></script>
   <script>
-    const API_BASE = 'http://127.0.0.1:8001';
+    const API_BASE = window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.API_URL;
+    const SITE_URL = window.RUNTIME_CONFIG && window.RUNTIME_CONFIG.SITE_URL;
+    const successCta = document.getElementById('successCta');
+    const errorCta = document.getElementById('errorCta');
+
+    if (SITE_URL) {
+      successCta.href = `${SITE_URL}/dashboard`;
+      errorCta.href = `${SITE_URL}/dashboard`;
+    }
     
     const elements = {
       loading: document.getElementById('loading'),
@@ -129,6 +138,11 @@
       const urlParams = new URLSearchParams(window.location.search);
       const sessionId = urlParams.get('session_id');
       
+      if (!API_BASE) {
+        showError('API URL is not configured. Please contact support.');
+        return;
+      }
+
       if (!sessionId) {
         showError('No payment session found');
         return;

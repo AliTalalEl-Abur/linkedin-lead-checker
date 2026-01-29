@@ -245,10 +245,10 @@ This implementation adds complete Stripe payment integration to enable users to 
 Create Stripe checkout session.
 
 ```bash
-curl -X POST http://127.0.0.1:8000/billing/checkout \
+curl -X POST BACKEND_URL/billing/checkout \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"return_url": "http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}"}'
+  -d '{"return_url": "NEXT_PUBLIC_SITE_URL/checkout-result?session_id={CHECKOUT_SESSION_ID}"}'
 ```
 
 **Response**:
@@ -282,7 +282,7 @@ Handle Stripe webhook events.
 7. ✅ Run tests: `python test_stripe_integration.py`
 8. ✅ Start backend: `uvicorn app.main:app --reload`
 9. ✅ Start frontend: `cd web && npm run dev`
-10. ✅ Test at http://localhost:3000/dashboard
+10. ✅ Test at NEXT_PUBLIC_SITE_URL/dashboard
 
 👉 **Detailed steps**: See [STRIPE_QUICKSTART.md](./STRIPE_QUICKSTART.md)
 
@@ -308,7 +308,7 @@ python test_stripe_integration.py
 ```bash
 # Install Stripe CLI
 stripe login
-stripe listen --forward-to localhost:8000/api/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/api/billing/webhook/stripe
 
 # In another terminal
 stripe trigger checkout.session.completed

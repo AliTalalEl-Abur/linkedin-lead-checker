@@ -13,10 +13,11 @@ Run: python test_subscription_activation.py
 
 import sys
 import time
+import os
 import requests
 from datetime import datetime, timezone
 
-API_BASE = "http://localhost:8000"
+API_BASE = os.getenv("BACKEND_URL", "")
 
 # ANSI colors
 GREEN = '\033[92m'

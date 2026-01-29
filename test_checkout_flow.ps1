@@ -1,8 +1,7 @@
 # Script de prueba completo del flujo Stripe Checkout
 # Usa puerto 8001 (ajusta si tu servidor corre en otro)
 
-$PORT = 8001
-$BASE_URL = "http://127.0.0.1:$PORT"
+$BASE_URL = $env:BACKEND_URL
 
 Write-Host "`n🧪 TEST: Flujo Completo de Stripe Checkout`n" -ForegroundColor Cyan
 
@@ -46,7 +45,7 @@ try {
     $checkoutResp = Invoke-RestMethod -Method Post `
         -Uri "$BASE_URL/billing/checkout" `
         -Headers @{ Authorization = "Bearer $TOKEN" } `
-        -Body (@{ return_url = "http://localhost:3000/billing/return?session_id={CHECKOUT_SESSION_ID}" } | ConvertTo-Json) `
+        -Body (@{ return_url = "${env:NEXT_PUBLIC_SITE_URL}/billing/return?session_id={CHECKOUT_SESSION_ID}" } | ConvertTo-Json) `
         -ContentType 'application/json'
     
     Write-Host "   ✅ Sesión creada: $($checkoutResp.sessionId)" -ForegroundColor Green
@@ -85,7 +84,7 @@ try {
     } else {
         Write-Host "`n   ⚠️  Advertencia: el plan sigue siendo '$($userUpdated.plan)'" -ForegroundColor Yellow
         Write-Host "   💡 Verifica que:" -ForegroundColor Yellow
-        Write-Host "      - Stripe CLI esté escuchando: stripe listen --forward-to 127.0.0.1:8001/billing/webhook/stripe" -ForegroundColor Yellow
+        Write-Host "      - Stripe CLI esté escuchando: stripe listen --forward-to BACKEND_URL/billing/webhook/stripe" -ForegroundColor Yellow
         Write-Host "      - STRIPE_WEBHOOK_SECRET esté correcto en .env" -ForegroundColor Yellow
     }
 } catch {

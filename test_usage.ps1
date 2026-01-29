@@ -2,9 +2,11 @@
 
 Write-Host "Starting usage control test..." -ForegroundColor Cyan
 
+$API_URL = $env:BACKEND_URL
+
 # Login
 Write-Host "`n1. Login as free user..." -ForegroundColor Yellow
-$loginResponse = curl.exe -s -X POST "http://localhost:8000/auth/login" `
+$loginResponse = curl.exe -s -X POST "$API_URL/auth/login" `
     -H "Content-Type: application/json" `
     -d '{"email":"freeuser@test.com"}' | ConvertFrom-Json
 
@@ -13,7 +15,7 @@ Write-Host "   Token received: $($token.Substring(0,30))..." -ForegroundColor Gr
 
 # Get user info
 Write-Host "`n2. Get user info..." -ForegroundColor Yellow
-$meResponse = curl.exe -s "http://localhost:8000/me" `
+$meResponse = curl.exe -s "$API_URL/me" `
     -H "Authorization: Bearer $token" | ConvertFrom-Json
 
 Write-Host "   Plan: $($meResponse.plan)" -ForegroundColor White
@@ -26,7 +28,7 @@ $limit = $meResponse.usage.limit
 Write-Host "`n3. Making $limit analyses..." -ForegroundColor Yellow
 
 for ($i = 1; $i -le $limit; $i++) {
-    $analyzeResponse = curl.exe -s -X POST "http://localhost:8000/analyze/profile" `
+    $analyzeResponse = curl.exe -s -X POST "$API_URL/analyze/profile" `
         -H "Content-Type: application/json" `
         -H "Authorization: Bearer $token" `
         -d '{"linkedin_profile_data":{"name":"Test"}}' | ConvertFrom-Json
@@ -36,7 +38,7 @@ for ($i = 1; $i -le $limit; $i++) {
 
 # Try to exceed limit
 Write-Host "`n4. Trying to exceed limit..." -ForegroundColor Yellow
-$response = curl.exe -s -w "%{http_code}" -X POST "http://localhost:8000/analyze/profile" `
+$response = curl.exe -s -w "%{http_code}" -X POST "$API_URL/analyze/profile" `
     -H "Content-Type: application/json" `
     -H "Authorization: Bearer $token" `
     -d '{"linkedin_profile_data":{"name":"Test"}}'

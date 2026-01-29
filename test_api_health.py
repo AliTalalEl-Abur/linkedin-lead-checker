@@ -1,11 +1,11 @@
 """
 Quick script to test API endpoints after deployment
 """
+import os
 import requests
 import json
 
-BASE_URL = "https://linkedin-lead-checker-api.onrender.com"
-# BASE_URL = "http://localhost:5000"  # Uncomment for local testing
+BASE_URL = os.getenv("BACKEND_URL", "")
 
 def test_endpoint(method, path, description):
     """Test a single endpoint"""

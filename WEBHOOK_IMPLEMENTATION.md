@@ -191,7 +191,7 @@ stripe login
 
 **3. Forwarding de Webhooks:**
 ```bash
-stripe listen --forward-to http://127.0.0.1:8000/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/billing/webhook/stripe
 ```
 
 **4. Trigger Events:**

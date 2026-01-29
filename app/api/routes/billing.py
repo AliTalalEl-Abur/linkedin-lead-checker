@@ -70,6 +70,7 @@ def create_checkout_session(
     current_user: User = Depends(get_current_user),  # ✅ SECURITY: JWT authentication required
     db: Session = Depends(get_db),
     stripe_service: StripeService = Depends(get_stripe_service),
+    http_request: Request | None = None,
 ):
     """
     Create a Stripe checkout session for upgrading to paid plan.
@@ -90,11 +91,14 @@ def create_checkout_session(
     
     BLOCKED: Any plan not in the whitelist or invalid price_id.
     """
+    request_id = getattr(getattr(http_request, "state", None), "request_id", "unknown")
+
     # VALIDATION 1: return_url is required
     if not request.return_url:
         logger.warning(
-            "CHECKOUT_REJECTED | user_id=%s | reason=missing_return_url",
-            current_user.id
+            "CHECKOUT_REJECTED | request_id=%s | user_id=%s | reason=missing_return_url",
+            request_id,
+            current_user.id,
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
@@ -104,9 +108,9 @@ def create_checkout_session(
     # VALIDATION 2: return_url must include {CHECKOUT_SESSION_ID} placeholder
     if "{CHECKOUT_SESSION_ID}" not in request.return_url:
         logger.warning(
-            "CHECKOUT_REJECTED | user_id=%s | reason=invalid_return_url | url=%s",
+            "CHECKOUT_REJECTED | request_id=%s | user_id=%s | reason=invalid_return_url",
+            request_id,
             current_user.id,
-            request.return_url
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -117,8 +121,9 @@ def create_checkout_session(
     plan = request.plan.lower().strip() if request.plan else None
     if not plan:
         logger.warning(
-            "CHECKOUT_REJECTED | user_id=%s | reason=missing_plan",
-            current_user.id
+            "CHECKOUT_REJECTED | request_id=%s | user_id=%s | reason=missing_plan",
+            request_id,
+            current_user.id,
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -129,10 +134,10 @@ def create_checkout_session(
     ALLOWED_PLANS = ("starter", "pro", "team")
     if plan not in ALLOWED_PLANS:
         logger.warning(
-            "CHECKOUT_REJECTED | user_id=%s | plan=%s | reason=invalid_plan | allowed=%s",
+            "CHECKOUT_REJECTED | request_id=%s | user_id=%s | plan=%s | reason=invalid_plan",
+            request_id,
             current_user.id,
             plan,
-            ALLOWED_PLANS
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, 
@@ -150,9 +155,9 @@ def create_checkout_session(
         )
         
         logger.info(
-            "CHECKOUT_SESSION_CREATED | user_id=%s | email=%s | plan=%s | session_id=%s | authenticated=true",
+            "CHECKOUT_SESSION_CREATED | request_id=%s | user_id=%s | plan=%s | session_id=%s | authenticated=true",
+            request_id,
             current_user.id,
-            current_user.email,
             plan,
             result.get('sessionId', 'unknown')
         )
@@ -162,9 +167,9 @@ def create_checkout_session(
     except ValueError as e:
         # Validation errors (invalid plan, missing price_id, unauthorized price_id)
         logger.error(
-            "CHECKOUT_SESSION_FAILED | user_id=%s | email=%s | plan=%s | error=%s | type=validation",
+            "CHECKOUT_SESSION_FAILED | request_id=%s | user_id=%s | plan=%s | error=%s | type=validation",
+            request_id,
             current_user.id,
-            current_user.email,
             plan,
             str(e)
         )
@@ -176,9 +181,9 @@ def create_checkout_session(
     except stripe.error.InvalidRequestError as e:
         # Stripe API errors (invalid price_id, configuration issues)
         logger.error(
-            "CHECKOUT_SESSION_FAILED | user_id=%s | email=%s | plan=%s | error=%s | type=stripe_invalid",
+            "CHECKOUT_SESSION_FAILED | request_id=%s | user_id=%s | plan=%s | error=%s | type=stripe_invalid",
+            request_id,
             current_user.id,
-            current_user.email,
             plan,
             str(e)
         )
@@ -190,9 +195,9 @@ def create_checkout_session(
     except stripe.error.StripeError as e:
         # Other Stripe errors (network, authentication, etc.)
         logger.error(
-            "CHECKOUT_SESSION_FAILED | user_id=%s | email=%s | plan=%s | error=%s | type=stripe_error",
+            "CHECKOUT_SESSION_FAILED | request_id=%s | user_id=%s | plan=%s | error=%s | type=stripe_error",
+            request_id,
             current_user.id,
-            current_user.email,
             plan,
             str(e)
         )
@@ -204,9 +209,9 @@ def create_checkout_session(
     except Exception as e:
         # Unexpected errors
         logger.error(
-            "CHECKOUT_SESSION_FAILED | user_id=%s | email=%s | plan=%s | error=%s | type=unexpected",
+            "CHECKOUT_SESSION_FAILED | request_id=%s | user_id=%s | plan=%s | error=%s | type=unexpected",
+            request_id,
             current_user.id,
-            current_user.email,
             plan,
             str(e)
         )
@@ -247,14 +252,16 @@ async def handle_stripe_webhook(
     body = await request.body()
     signature = request.headers.get("stripe-signature")
 
+    request_id = getattr(getattr(request, "state", None), "request_id", "unknown")
+
     if not signature:
-        logger.warning("WEBHOOK_REJECTED | reason=missing_signature")
+        logger.warning("WEBHOOK_REJECTED | request_id=%s | reason=missing_signature", request_id)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing signature")
 
     try:
         event = stripe_service.verify_webhook_signature(body, signature)
     except Exception as e:
-        logger.warning("WEBHOOK_SIGNATURE_INVALID | error=%s", str(e))
+        logger.warning("WEBHOOK_SIGNATURE_INVALID | request_id=%s | error=%s", request_id, str(e))
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
 
     # Handle specific events
@@ -263,7 +270,8 @@ async def handle_stripe_webhook(
     event_id = event.get("id", "unknown")
     
     logger.info(
-        "WEBHOOK_RECEIVED | event_type=%s | event_id=%s",
+        "WEBHOOK_RECEIVED | request_id=%s | event_type=%s | event_id=%s",
+        request_id,
         event_type,
         event_id
     )
@@ -272,14 +280,16 @@ async def handle_stripe_webhook(
         result = stripe_service.handle_checkout_completed(event_data, db)
         if result:
             logger.info(
-                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | user_id=%s | status=success",
+                "WEBHOOK_PROCESSED | request_id=%s | event_type=%s | event_id=%s | user_id=%s | status=success",
+                request_id,
                 event_type,
                 event_id,
                 result.id
             )
         else:
             logger.warning(
-                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | status=failed",
+                "WEBHOOK_PROCESSED | request_id=%s | event_type=%s | event_id=%s | status=failed",
+                request_id,
                 event_type,
                 event_id
             )
@@ -289,14 +299,16 @@ async def handle_stripe_webhook(
         result = stripe_service.handle_subscription_created(event_data, db)
         if result:
             logger.info(
-                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | user_id=%s | status=success",
+                "WEBHOOK_PROCESSED | request_id=%s | event_type=%s | event_id=%s | user_id=%s | status=success",
+                request_id,
                 event_type,
                 event_id,
                 result.id
             )
         else:
             logger.warning(
-                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | status=failed",
+                "WEBHOOK_PROCESSED | request_id=%s | event_type=%s | event_id=%s | status=failed",
+                request_id,
                 event_type,
                 event_id
             )
@@ -306,7 +318,8 @@ async def handle_stripe_webhook(
         result = stripe_service.handle_subscription_deleted(event_data, db)
         if result:
             logger.info(
-                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | user_id=%s | status=success",
+                "WEBHOOK_PROCESSED | request_id=%s | event_type=%s | event_id=%s | user_id=%s | status=success",
+                request_id,
                 event_type,
                 event_id,
                 result.id
@@ -317,7 +330,8 @@ async def handle_stripe_webhook(
         result = stripe_service.handle_subscription_updated(event_data, db)
         if result:
             logger.info(
-                "WEBHOOK_PROCESSED | event_type=%s | event_id=%s | user_id=%s | status=success",
+                "WEBHOOK_PROCESSED | request_id=%s | event_type=%s | event_id=%s | user_id=%s | status=success",
+                request_id,
                 event_type,
                 event_id,
                 result.id
@@ -327,7 +341,8 @@ async def handle_stripe_webhook(
     else:
         # Acknowledge but ignore other event types
         logger.info(
-            "WEBHOOK_IGNORED | event_type=%s | event_id=%s | reason=not_handled",
+            "WEBHOOK_IGNORED | request_id=%s | event_type=%s | event_id=%s | reason=not_handled",
+            request_id,
             event_type,
             event_id
         )
@@ -342,7 +357,8 @@ async def handle_stripe_webhook(
 )
 def get_billing_status(
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    http_request: Request | None = None,
 ) -> BillingStatusResponse:
     """
     Get comprehensive billing status for current user.
@@ -382,8 +398,10 @@ def get_billing_status(
     if current_user.monthly_analyses_reset_at:
         reset_date = current_user.monthly_analyses_reset_at.isoformat()
     
+    request_id = getattr(getattr(http_request, "state", None), "request_id", "unknown")
     logger.info(
-        "BILLING_STATUS_CHECKED | user_id=%s | plan=%s | usage=%s/%s | can_analyze=%s | subscription_status=%s",
+        "BILLING_STATUS_CHECKED | request_id=%s | user_id=%s | plan=%s | usage=%s/%s | can_analyze=%s | subscription_status=%s",
+        request_id,
         current_user.id,
         plan,
         usage_current,

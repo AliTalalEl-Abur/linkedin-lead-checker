@@ -21,7 +21,7 @@ python run.py
 ### Webhooks Configurados:
 ```bash
 # Terminal 2: Stripe CLI (para testing local)
-stripe listen --forward-to localhost:8000/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/billing/webhook/stripe
 ```
 
 **O** configurar webhook en Stripe Dashboard para producción:
@@ -126,12 +126,12 @@ python test_subscription_flow.py tu-email+starter-test@gmail.com
 
 **Opción B: URL directa**
 ```
-http://localhost:8000/billing/checkout?plan=starter
+BACKEND_URL/billing/checkout?plan=starter
 ```
 
 **Opción C: Desde landing page**
 ```
-http://localhost:8000/index.html#pricing
+BACKEND_URL/index.html#pricing
 ```
 
 ### Paso 5: Completar el Pago en Stripe
@@ -176,7 +176,7 @@ INFO: User updated: plan=starter, limit=40
 **En Stripe CLI (Terminal 2), deberías ver:**
 ```
 -> checkout.session.completed [evt_...]
-<- [200] POST http://localhost:8000/billing/webhook/stripe [evt_...]
+<- [200] POST BACKEND_URL/billing/webhook/stripe [evt_...]
 ```
 
 ### Paso 7: Verificar Suscripción
@@ -305,7 +305,7 @@ Remaining: 39
 ## ✅ Checklist de Verificación
 
 ### Backend:
-- [ ] Backend corriendo en http://localhost:8000
+- [ ] Backend corriendo en BACKEND_URL
 - [ ] Webhook endpoint configurado
 - [ ] Stripe CLI escuchando (local) O webhook en Dashboard (producción)
 - [ ] Variables de entorno configuradas (.env)
@@ -370,11 +370,11 @@ Remaining: 39
 ```powershell
 # 1. Verificar webhook está escuchando
 # En Stripe CLI debe mostrar:
-stripe listen --forward-to localhost:8000/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/billing/webhook/stripe
 # Output: Ready! Your webhook signing secret is whsec_...
 
 # 2. Verificar endpoint responde
-curl -X POST http://localhost:8000/billing/webhook/stripe
+curl -X POST BACKEND_URL/billing/webhook/stripe
 # Debe retornar HTTP 400 (signature inválida es OK)
 
 # 3. Ver eventos recientes en Stripe
@@ -385,7 +385,7 @@ stripe events list --limit 5
 1. **Reiniciar Stripe CLI:**
    ```powershell
    # Ctrl+C para detener
-   stripe listen --forward-to localhost:8000/billing/webhook/stripe
+   stripe listen --forward-to BACKEND_URL/billing/webhook/stripe
    ```
 
 2. **Reenviar webhook manualmente:**
@@ -497,7 +497,7 @@ python verify_stripe_sync.py
 ```powershell
 # 1. Usuario ya tiene plan Starter
 # 2. Comprar plan Pro
-curl "http://localhost:8000/billing/checkout?plan=pro"
+curl "BACKEND_URL/billing/checkout?plan=pro"
 
 # 3. Verificar upgrade
 python test_subscription_flow.py tu-email+starter-test@gmail.com

@@ -6,12 +6,13 @@ Test script para validar nuevos límites y planes:
 - Rate limit: 30 segundos
 """
 
+import os
 import requests
 import json
 import time
 from datetime import datetime
 
-API_BASE = "http://127.0.0.1:8001"
+API_BASE = os.getenv("BACKEND_URL", "")
 
 # Test data
 test_email = f"test_{int(time.time())}@example.com"
@@ -107,7 +108,7 @@ def create_checkout(plan="pro"):
     response = requests.post(
         f"{API_BASE}/billing/checkout",
         json={
-            "return_url": "http://localhost:3000/checkout?session_id={CHECKOUT_SESSION_ID}",
+            "return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/checkout?session_id={CHECKOUT_SESSION_ID}",
             "plan": plan
         },
         headers={"Authorization": f"Bearer {token}"}

@@ -7,15 +7,16 @@ import styles from '../../styles/Dashboard.module.css';
 
 export default function BillingCancel() {
   const router = useRouter();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
   const { isInstalled, isChecking, openExtension } = useChromeExtension();
   const [showInstructions, setShowInstructions] = useState(false);
 
   const handleBackToPricing = () => {
-    router.push('/#pricing');
+    window.location.href = `${siteUrl}/pricing`;
   };
 
   const handleContactSupport = () => {
-    router.push('/support');
+    window.location.href = `${siteUrl}/support`;
   };
 
   const handleBackToExtension = () => {

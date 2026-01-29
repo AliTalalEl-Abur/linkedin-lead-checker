@@ -3,12 +3,12 @@
 Script simplificado para probar Stripe Checkout
 Ejecuta: python test_checkout_simple.py
 """
+import os
 import requests
 import time
 import webbrowser
 
-PORT = 8001
-BASE_URL = f"http://127.0.0.1:{PORT}"
+BASE_URL = os.getenv("BACKEND_URL", "")
 
 print("\n🧪 TEST: Flujo de Stripe Checkout\n")
 
@@ -48,7 +48,7 @@ try:
     resp = requests.post(
         f"{BASE_URL}/billing/checkout",
         headers={"Authorization": f"Bearer {token}"},
-        json={"return_url": "http://localhost:3000/billing/return?session_id={CHECKOUT_SESSION_ID}"}
+        json={"return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/billing/return?session_id={CHECKOUT_SESSION_ID}"}
     )
     resp.raise_for_status()
     checkout = resp.json()

@@ -11,7 +11,7 @@ npm install
 # Start development server
 npm run dev
 
-# Open http://localhost:3000 in your browser
+# Open NEXT_PUBLIC_SITE_URL in your browser
 
 ## 🔧 Daily Development
 
@@ -56,4 +56,4 @@ netstat -ano | findstr :3000
 $env:PORT=3001; npm run dev
 
 # Open in default browser after starting
-start http://localhost:3000
+start NEXT_PUBLIC_SITE_URL

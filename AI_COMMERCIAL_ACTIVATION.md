@@ -271,7 +271,7 @@ sqlite3 linkedin_lead_checker.db
 > UPDATE users SET plan='free' WHERE plan != 'free';
 
 # 3. Hacer request de análisis
-curl -X POST http://localhost:8000/analyze/profile \
+curl -X POST BACKEND_URL/analyze/profile \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{"profile": {...}}'
@@ -297,7 +297,7 @@ sqlite3 linkedin_lead_checker.db
 > UPDATE users SET plan='starter' WHERE email='test@example.com';
 
 # 2. Hacer request de análisis
-curl -X POST http://localhost:8000/analyze/profile \
+curl -X POST BACKEND_URL/analyze/profile \
   -H "Authorization: Bearer <token_del_starter>" \
   -H "Content-Type: application/json" \
   -d '{"profile": {...}}'
@@ -325,7 +325,7 @@ curl -X POST http://localhost:8000/analyze/profile \
 export OPENAI_ENABLED=false
 
 # 2. Hacer request (incluso con suscriptores activos)
-curl -X POST http://localhost:8000/analyze/profile \
+curl -X POST BACKEND_URL/analyze/profile \
   -H "Authorization: Bearer <token>" \
   -d '{"profile": {...}}'
 

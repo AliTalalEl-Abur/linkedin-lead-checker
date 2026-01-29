@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import List, Optional
+import os
 
 from pydantic import Field, field_validator
 from pydantic import AliasChoices
@@ -10,15 +11,11 @@ class Settings(BaseSettings):
     """Application configuration loaded from environment variables."""
 
     env: str = Field(default="dev")
-    cors_allow_origins: List[str] | str = Field(
-        default="http://localhost,http://localhost:3000,http://127.0.0.1:3000"
-    )
+    cors_allow_origins: List[str] | str = Field(default="")
     cors_allow_origin_regex: Optional[str] = Field(
         default=r"chrome-extension://.*"
     )
-    database_url: str = Field(
-        default="sqlite:///./linkedin_lead_checker.db"
-    )
+    database_url: str = Field(default="")
 
     # Stripe (unificado; acepta múltiples nombres de variables de entorno)
     stripe_api_key: Optional[str] = Field(
@@ -91,8 +88,8 @@ class Settings(BaseSettings):
     daily_registration_limit: int = Field(default=20, description="Max new registrations per day in soft launch mode")
 
     # Redirect URLs (pueden apuntar a extensión o webapp)
-    stripe_success_url: str = Field(default="http://localhost:3000/billing/success")
-    stripe_cancel_url: str = Field(default="http://localhost:3000/billing/cancel")
+    stripe_success_url: str = Field(default="")
+    stripe_cancel_url: str = Field(default="")
 
     jwt_secret_key: str = Field(
         default="dev-secret-key-change-in-production-at-least-32-chars-long"
@@ -116,7 +113,16 @@ class Settings(BaseSettings):
     @classmethod
     def split_origins(cls, v: str) -> List[str]:
         """Convert comma-separated CORS origins to list."""
-        return [item.strip() for item in v.split(",") if item.strip()]
+        value = v.strip() if isinstance(v, str) else ""
+        if not value:
+            value = os.getenv("FRONTEND_URL", "").strip()
+
+        items = [item.strip() for item in value.split(",") if item.strip()]
+        if os.getenv("FRONTEND_URL") and os.getenv("FRONTEND_URL") not in items:
+            items.append(os.getenv("FRONTEND_URL"))
+        if "chrome-extension://*" not in items:
+            items.append("chrome-extension://*")
+        return items
 
 
 @lru_cache(maxsize=1)

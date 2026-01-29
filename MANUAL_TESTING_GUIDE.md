@@ -40,7 +40,7 @@ npm run dev
 
 #### Paso A: Navegar a la Landing Page
 ```
-http://localhost:3000
+NEXT_PUBLIC_SITE_URL
 ```
 
 #### Paso B: Hacer Scroll hasta la Sección de Pricing
@@ -54,13 +54,13 @@ Verás 3 planes:
 - ✅ Esto confirma que la validación de autenticación funciona
 
 #### Paso D: Hacer Login
-1. Ir a `http://localhost:3000/login`
+1. Ir a `NEXT_PUBLIC_SITE_URL/login`
 2. Ingresar email (cualquier email válido)
 3. Click en "Continue"
 4. **Resultado esperado:** Redirige a `/dashboard`
 
 #### Paso E: Regresar a Landing y Hacer Click en un Plan
-1. Ir a `http://localhost:3000`
+1. Ir a `NEXT_PUBLIC_SITE_URL`
 2. Scroll hasta pricing
 3. Click en "Subscribe Now" de cualquier plan
 4. **Resultado esperado:**
@@ -111,7 +111,7 @@ Cuando haces click en un botón de pricing:
 3. **Request Payload:**
    ```json
    {
-     "return_url": "http://localhost:3000/billing-return.html?session_id={CHECKOUT_SESSION_ID}",
+   "return_url": "NEXT_PUBLIC_SITE_URL/billing-return.html?session_id={CHECKOUT_SESSION_ID}",
      "plan": "pro"  // o "starter" o "team"
    }
    ```
@@ -192,7 +192,7 @@ Si quieres probar webhooks localmente:
 ```bash
 # Terminal 3
 stripe login
-stripe listen --forward-to http://127.0.0.1:8000/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/billing/webhook/stripe
 ```
 
 Esto mostrará eventos en tiempo real cuando completes un pago.

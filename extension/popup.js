@@ -4,10 +4,13 @@
  */
 
 const API_CONFIG = {
-  baseUrl: "https://linkedin-lead-checker-api.onrender.com",
+  baseUrl: "BACKEND_URL",
   loginEndpoint: "/auth/login",
   billingStatusEndpoint: "/billing/status",
+  analyzeEndpoint: "/analyze",
 };
+
+const FRONTEND_URL = "FRONTEND_URL";
 
 // DOM Elements
 const loginForm = document.getElementById("authForm");
@@ -507,58 +510,56 @@ async function handleAnalyze() {
     // Get authentication token
     const result = await chrome.storage.local.get(['access_token']);
     if (!result.access_token) {
-      showStatus("Please login first", "error");
+      showLoginForm();
       analyzeButton.disabled = false;
       return;
     }
 
-    // Check billing status and credits before making the call
-    showStatus("Checking credits...", "info");
+    // Check billing status
+    showStatus("Checking your plan...", "info");
     const billingStatus = await fetchBillingStatus(result.access_token);
-    
-    if (!billingStatus.can_analyze) {
+    if (!billingStatus) {
+      showStatus("Unable to verify plan. Please try again.", "error");
       analyzeButton.disabled = false;
-      if (billingStatus.plan === 'free') {
-        showLimitModal();
-      } else {
-        showStatus("⚠️ You've reached your monthly limit. Your credits reset on the 1st.", "error");
-      }
       return;
     }
+
+    const activePlan = ['starter', 'pro', 'team'].includes(billingStatus.plan);
+    const subscriptionActive = ['active', 'trialing'].includes(billingStatus.subscription_status || '');
+    const remaining = Math.max(0, (billingStatus.usage_limit || 0) - (billingStatus.usage_current || 0));
+    const canUseAi = activePlan && subscriptionActive && remaining > 0;
 
     // Extract profile data from the page
     showStatus("Extracting profile data...", "info");
     const profileData = await extractProfileData(activeTab.id);
     
     if (!profileData || Object.keys(profileData).length === 0) {
-      showStatus("❌ Could not extract profile data. Make sure you're on a LinkedIn profile page.", "error");
+      showStatus("❌ Could not extract profile data. Please refresh the LinkedIn page and try again.", "error");
       analyzeButton.disabled = false;
+      setTimeout(() => {
+        showStatus("💡 Tip: Make sure you're on a LinkedIn profile page, then click the extension icon.", "info");
+      }, 3000);
       return;
     }
+    
+    console.log("Profile data to send:", profileData);
 
-    // Call the real API endpoint
-    showStatus("Analyzing profile with AI...", "info");
-    const response = await fetch(`${API_CONFIG.baseUrl}/analyze/linkedin`, {
+    // Call the API endpoint with explicit mode
+    showStatus(canUseAi ? "Analyzing profile with AI..." : "Generating preview...", "info");
+    const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.analyzeEndpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${result.access_token}`
       },
       body: JSON.stringify({
-        profile_extract: profileData,
-        profile_url: activeTab.url
+        profileExtract: profileData,
+        profileUrl: activeTab.url,
+        mode: canUseAi ? 'ai' : 'preview'
       })
     });
 
-    if (response.status === 429) {
-      // User hit monthly limit - 1 credit will be deducted when limit is reached
-      analyzeButton.disabled = false;
-      showLimitModal();
-      return;
-    }
-
-    if (response.status === 403) {
-      // No active subscription or credits
+    if (response.status === 429 || response.status === 403) {
       analyzeButton.disabled = false;
       showLimitModal();
       return;
@@ -575,11 +576,11 @@ async function handleAnalyze() {
 
     const data = await response.json();
     
-    // Check if response is in preview mode (no credits used)
-    if (data.preview) {
-      // Preview mode - show upgrade prompt
+    // Preview mode still returns UI data
+    if (data.mode === "preview") {
+      showStatus("", "");
+      displayAnalysisResults(data);
       analyzeButton.disabled = false;
-      showLimitModal();
       return;
     }
 
@@ -605,52 +606,81 @@ async function handleAnalyze() {
  */
 async function extractProfileData(tabId) {
   try {
+    console.log("Attempting to extract profile from tab:", tabId);
     const response = await chrome.tabs.sendMessage(tabId, { action: "extractProfile" });
+    console.log("Content script response:", response);
+    
     if (response && response.success) {
+      console.log("Profile data extracted successfully:", response.data);
       return response.data;
     }
+    
+    console.warn("Content script returned no data or failed:", response);
     return null;
   } catch (error) {
     console.error("Failed to extract profile data:", error);
+    console.error("This usually means the content script is not loaded. Try refreshing the LinkedIn page.");
     return null;
   }
+}
+
+/**
+ * Display free tier preview (no API call)
+ */
+function displayFreePreview() {
+  // Show generic preview insights
+  const previewInsights = [
+    "Profile shows professional experience relevant to B2B outreach",
+    "Active LinkedIn presence with industry connections",
+    "Career progression indicates decision-making authority"
+  ];
+  
+  // Show 3 stars for preview
+  renderStars(3);
+  
+  // Display insights
+  insightsList.innerHTML = '';
+  previewInsights.forEach(insight => {
+    const li = document.createElement('li');
+    li.textContent = insight;
+    insightsList.appendChild(li);
+  });
+  
+  // Show results container with upgrade prompt
+  resultsContainer.style.display = 'block';
+  
+  console.log('Showing free preview to user');
 }
 
 /**
  * Display real analysis results from API
  */
 function displayAnalysisResults(data) {
-  // Extract UI data from response
+  const mode = data.mode || (data.preview ? "preview" : "ai");
   const ui = data.ui || {};
-  const qualification = data.qualification || {};
-  
-  // Show contact recommendation
-  const shouldContact = ui.should_contact;
-  const priority = ui.priority || "medium";
-  const score = ui.score || 0;
-  
-  // Render star rating based on score (convert 0-100 to 1-5 stars)
-  const starCount = Math.round((score / 100) * 5);
-  renderStars(starCount);
-  
-  // Display key insights
-  const insights = [];
-  
-  if (ui.reasoning) {
-    insights.push(ui.reasoning);
+  const score = typeof data.score === "number" ? data.score : (ui.score || 0);
+  const starCount = Number.isInteger(data.stars)
+    ? data.stars
+    : Math.round((score / 100) * 5);
+  renderStars(Math.max(1, Math.min(5, starCount)));
+
+  const insights = Array.isArray(data.insights) ? [...data.insights] : [];
+  if (insights.length === 0) {
+    if (ui.reasoning) {
+      insights.push(ui.reasoning);
+    }
+    if (ui.key_points && Array.isArray(ui.key_points)) {
+      insights.push(...ui.key_points);
+    }
+    if (ui.suggested_approach) {
+      insights.push(`💡 Suggested approach: ${ui.suggested_approach}`);
+    }
+    if (ui.red_flags && ui.red_flags.length > 0) {
+      insights.push(`⚠️ Red flags: ${ui.red_flags.join(", ")}`);
+    }
   }
-  
-  if (ui.key_points && Array.isArray(ui.key_points)) {
-    insights.push(...ui.key_points);
-  }
-  
-  if (ui.suggested_approach) {
-    insights.push(`💡 Suggested approach: ${ui.suggested_approach}`);
-  }
-  
-  if (ui.red_flags && ui.red_flags.length > 0) {
-    insights.push(`⚠️ Red flags: ${ui.red_flags.join(", ")}`);
-  }
+
+  const shouldContact = typeof data.decision === "boolean" ? data.decision : ui.should_contact;
   
   // Render insights list
   insightsList.innerHTML = "";
@@ -665,6 +695,7 @@ function displayAnalysisResults(data) {
     const badge = document.createElement("div");
     badge.className = "success-badge";
     badge.style.marginBottom = "12px";
+    const priority = ui.priority || (mode === "preview" ? "medium" : "medium");
     const priorityEmoji = priority === "high" ? "🔥" : priority === "medium" ? "✅" : "👍";
     badge.textContent = `${priorityEmoji} Recommended Contact (${priority} priority)`;
     resultsContainer.insertBefore(badge, resultsContainer.firstChild);
@@ -741,8 +772,7 @@ function hideResults() {
  * Handle View Pricing button click
  */
 function handleViewPricing() {
-  // Open pricing.html in a new tab
-  const pricingUrl = chrome.runtime.getURL("pricing.html");
+  const pricingUrl = `${FRONTEND_URL}/pricing`;
   chrome.tabs.create({ url: pricingUrl });
 }
 
@@ -764,7 +794,7 @@ function closeLimitModal() {
  * Handle Upgrade Plan button click
  */
 function handleUpgrade() {
-  const pricingUrl = chrome.runtime.getURL("pricing.html");
+  const pricingUrl = `${FRONTEND_URL}/pricing`;
   chrome.tabs.create({ url: pricingUrl });
   closeLimitModal();
 }

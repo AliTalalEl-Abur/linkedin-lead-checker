@@ -43,8 +43,8 @@ Se han implementado exitosamente las dos páginas de billing solicitadas:
 
 ### Desarrollo:
 ```
-Success: http://localhost:3000/billing/success?session_id=cs_test_...
-Cancel:  http://localhost:3000/billing/cancel
+Success: NEXT_PUBLIC_SITE_URL/billing/success?session_id=cs_test_...
+Cancel:  NEXT_PUBLIC_SITE_URL/billing/cancel
 ```
 
 ### Producción:
@@ -255,11 +255,11 @@ Las páginas de billing están **completamente implementadas** y listas para:
 - ✅ Integración con extension
 - ✅ Deploy a producción
 
-**Servidor de desarrollo activo:** http://localhost:3000
+**Servidor activo:** NEXT_PUBLIC_SITE_URL
 
 **Páginas disponibles:**
-- http://localhost:3000/billing/success?session_id=test
-- http://localhost:3000/billing/cancel
+- NEXT_PUBLIC_SITE_URL/billing/success?session_id=test
+- NEXT_PUBLIC_SITE_URL/billing/cancel
 
 ---
 

@@ -21,7 +21,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the landing page.
+Open NEXT_PUBLIC_SITE_URL to see the landing page.
 
 ### Build for Production
 

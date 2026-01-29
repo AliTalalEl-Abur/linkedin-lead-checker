@@ -1,8 +1,9 @@
 """Simple rate limit test con servidor existente."""
+import os
 import requests
 import time
 
-BASE_URL = "http://127.0.0.1:8001"
+BASE_URL = os.getenv("BACKEND_URL", "")
 
 print("="*70)
 print("Test de Rate Limiting (30 segundos)")

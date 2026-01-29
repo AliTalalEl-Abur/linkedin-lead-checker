@@ -222,7 +222,7 @@ Ver guía completa: [EXTENSION_ID_SETUP.md](EXTENSION_ID_SETUP.md)
 
 4. **Probar detección:**
    ```
-   http://localhost:3000/billing/success?session_id=test
+       NEXT_PUBLIC_SITE_URL/billing/success?session_id=test
    ```
 
 5. **Verificar:**

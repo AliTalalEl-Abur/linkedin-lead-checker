@@ -7,7 +7,7 @@ El backend se cerraba inmediatamente al recibir peticiones HTTP debido a un prob
 ## ✅ Solución
 
 El servidor **funciona correctamente** cuando se ejecuta mediante:
-- `python -m uvicorn app.main:application --host 127.0.0.1 --port 8001`
+- `python -m uvicorn app.main:application --host 0.0.0.0 --port 8001`
 - O usando subprocess desde un script Python separado
 
 ## 🧪 Pruebas Realizadas
@@ -66,15 +66,15 @@ python start_dev.py
 ### Opción 2: Manual
 ```powershell
 # Terminal 1: Backend
-python -m uvicorn app.main:application --host 127.0.0.1 --port 8001 --reload
+python -m uvicorn app.main:application --host 0.0.0.0 --port 8001 --reload
 
 # Terminal 2: Stripe CLI
-stripe listen --forward-to http://127.0.0.1:8001/billing/webhook
+stripe listen --forward-to BACKEND_URL/billing/webhook
 ```
 
 ### Opción 3: Probar sin Stripe
 ```powershell
-python -m uvicorn app.main:application --host 127.0.0.1 --port 8001
+python -m uvicorn app.main:application --host 0.0.0.0 --port 8001
 ```
 
 ## 🧪 Testing E2E Pendiente
@@ -110,12 +110,12 @@ python -m uvicorn app.main:application --host 127.0.0.1 --port 8001
 ```powershell
 # Test disable_free_plan
 $env:DISABLE_FREE_PLAN="true"
-python -m uvicorn app.main:application --host 127.0.0.1 --port 8001
+python -m uvicorn app.main:application --host 0.0.0.0 --port 8001
 # Usuario FREE intenta análisis → 402 "Free analyses are temporarily disabled"
 
 # Test disable_all_analyses
 $env:DISABLE_ALL_ANALYSES="true"
-python -m uvicorn app.main:application --host 127.0.0.1 --port 8001
+python -m uvicorn app.main:application --host 0.0.0.0 --port 8001
 # Cualquier usuario intenta análisis → 503 "Analysis service temporarily unavailable"
 ```
 
@@ -166,9 +166,9 @@ python -m uvicorn app.main:application --host 127.0.0.1 --port 8001
 
 ## 🔗 URLs Importantes
 
-- Backend API: http://127.0.0.1:8001
-- API Docs (Swagger): http://127.0.0.1:8001/docs
-- Health Check: http://127.0.0.1:8001/health
+- Backend API: BACKEND_URL
+- API Docs (Swagger): BACKEND_URL/docs
+- Health Check: BACKEND_URL/health
 - Dashboard: `file:///C:/Users/LENOVO/Desktop/linkedin-lead-checker/web/dashboard.html`
 
 ## 💡 Próximos Pasos
@@ -185,13 +185,13 @@ Si encuentras problemas:
 
 ```powershell
 # Ver logs detallados
-python -m uvicorn app.main:application --host 127.0.0.1 --port 8001 --log-level debug
+python -m uvicorn app.main:application --host 0.0.0.0 --port 8001 --log-level debug
 
 # Verificar database
 sqlite3 linkedin_lead_checker.db ".schema users"
 
 # Test rápido de health
-curl http://127.0.0.1:8001/health
+curl BACKEND_URL/health
 
 # Ver productos Stripe
 stripe products list

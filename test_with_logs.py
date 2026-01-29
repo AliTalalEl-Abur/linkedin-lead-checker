@@ -1,6 +1,7 @@
 """Test login with server output visible."""
 import subprocess
 import time
+import os
 import requests
 import sys
 import threading
@@ -14,7 +15,7 @@ def tail_output(proc):
 print("Starting server...")
 server_process = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "app.main:application", 
-     "--host", "127.0.0.1", "--port", "8001"],
+     "--host", "0.0.0.0", "--port", "8001"],
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
     text=True,
@@ -40,7 +41,8 @@ try:
         "full_name": "Test User"
     }
     
-    response = requests.post("http://127.0.0.1:8001/auth/login", json=data, timeout=30)
+    base_url = os.getenv("BACKEND_URL", "")
+    response = requests.post(f"{base_url}/auth/login", json=data, timeout=30)
     print(f"\nResponse status: {response.status_code}")
     print(f"Response: {response.text}")
     

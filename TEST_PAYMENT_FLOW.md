@@ -9,7 +9,7 @@ Guía paso a paso para probar el flujo completo desde registro hasta análisis A
 ### Backend
 ```bash
 # Verificar que el backend esté corriendo
-http://localhost:5000/health
+BACKEND_URL/health
 # O en producción:
 https://linkedin-lead-checker-api.onrender.com/health
 ```
@@ -17,7 +17,7 @@ https://linkedin-lead-checker-api.onrender.com/health
 ### Frontend Web
 ```bash
 # Verificar que el frontend esté corriendo
-http://localhost:3000
+NEXT_PUBLIC_SITE_URL
 # O en producción:
 https://linkedinleadchecker.com
 ```
@@ -41,7 +41,7 @@ https://linkedinleadchecker.com
 
 ### **Acción:**
 ```
-1. Ir a: http://localhost:3000 (o producción)
+1. Ir a: NEXT_PUBLIC_SITE_URL
 2. Click en "Sign Up" o "Get Started"
 3. Completar formulario:
    - Email: test.user+001@gmail.com
@@ -132,7 +132,7 @@ Body: {
 ### **Acción:**
 ```
 1. Desde dashboard, click en "Upgrade" o "Pricing"
-2. O navegar a: http://localhost:3000/pricing
+2. O navegar a: NEXT_PUBLIC_SITE_URL/pricing
 ```
 
 ### **✅ Verificación:**
@@ -291,7 +291,7 @@ Automático después del pago
 
 #### URL de Success:
 ```
-http://localhost:3000/payment-success?session_id=cs_test_abc123
+NEXT_PUBLIC_SITE_URL/payment-success?session_id=cs_test_abc123
 # O producción:
 https://linkedinleadchecker.com/payment-success?session_id=cs_test_abc123
 ```
@@ -571,7 +571,7 @@ Response: 429 Too Many Requests
 ### Problema: Webhook no recibido
 ```bash
 # Verificar webhook configurado
-stripe listen --forward-to localhost:5000/webhooks/stripe
+stripe listen --forward-to BACKEND_URL/webhooks/stripe
 
 # Verificar logs
 grep "Stripe webhook" logs/app.log

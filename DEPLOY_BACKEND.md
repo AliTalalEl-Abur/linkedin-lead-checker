@@ -126,7 +126,7 @@ INFO: service_ready=true
 | Variable | Valor Defecto | Descripción |
 |----------|--------------|------------|
 | `OPENAI_ENABLED` | `false` | **Mantén en false** hasta tener suscriptores Pro. Evita coste OpenAI |
-| `CORS_ALLOW_ORIGINS` | `localhost` | Actualiza con tu dominio de extensión/webapp |
+| `CORS_ALLOW_ORIGINS` | `FRONTEND_URL` | Actualiza con tu dominio de extensión/webapp |
 
 ### OPCIONALES (No rompen arranque si faltan)
 

@@ -20,7 +20,7 @@ npm run dev
 ```
 
 ### 3. Abre el Navegador
-- Ve a: http://localhost:3000
+- Ve a: NEXT_PUBLIC_SITE_URL
 - Abre DevTools (F12) → Pestaña **Network**
 - Click en "Install Chrome Extension"
 - Click en "Join Waitlist" (después de ingresar email)
@@ -63,7 +63,7 @@ INFO - EVENT_TRACK | waitlist_join | page=landing | ip=127.0.0*** | ...
 ./test_tracking.ps1
 
 # O con curl
-curl -X POST http://localhost:8000/events/track -H "Content-Type: application/json" -d '{"event":"install_extension_click","page":"landing"}'
+curl -X POST BACKEND_URL/events/track -H "Content-Type: application/json" -d '{"event":"install_extension_click","page":"landing"}'
 ```
 
 ---

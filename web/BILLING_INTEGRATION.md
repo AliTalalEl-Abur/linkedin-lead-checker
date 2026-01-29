@@ -14,8 +14,8 @@ Cancel:  https://linkedin-lead-checker.vercel.app/billing/cancel
 ### URLs de Desarrollo
 
 ```
-Success: http://localhost:3000/billing/success?session_id={CHECKOUT_SESSION_ID}
-Cancel:  http://localhost:3000/billing/cancel
+Success: NEXT_PUBLIC_SITE_URL/billing/success?session_id={CHECKOUT_SESSION_ID}
+Cancel:  NEXT_PUBLIC_SITE_URL/billing/cancel
 ```
 
 ---
@@ -56,8 +56,8 @@ def create_checkout_session(
 ```javascript
 // En la extensión Chrome
 async function upgradeToPlan(plan) {
-  const API_URL = 'https://your-api.com'; // O localhost para dev
-  const WEB_URL = 'https://linkedin-lead-checker.vercel.app'; // O localhost:3000
+  const API_URL = 'NEXT_PUBLIC_API_URL';
+  const WEB_URL = 'NEXT_PUBLIC_SITE_URL';
   
   const response = await fetch(`${API_URL}/billing/checkout`, {
     method: 'POST',
@@ -163,7 +163,7 @@ STRIPE_PRICE_TEAM_ID=price_...     # $49/mo - 500 analyses
 # API URL
 NEXT_PUBLIC_API_URL=https://your-api.com  # Producción
 # O
-NEXT_PUBLIC_API_URL=http://127.0.0.1:8000  # Desarrollo
+NEXT_PUBLIC_API_URL=NEXT_PUBLIC_API_URL
 ```
 
 ---
@@ -182,7 +182,7 @@ cd web
 npm run dev
 
 # Navegar a:
-# http://localhost:3000/upgrade
+# NEXT_PUBLIC_SITE_URL/upgrade
 # Click en "Upgrade to Pro"
 # Completar pago en Stripe Test Mode
 # Verificar redirección a /billing/success
@@ -202,7 +202,7 @@ Usar estas tarjetas de prueba:
 stripe login
 
 # Escuchar webhooks
-stripe listen --forward-to http://localhost:8000/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/billing/webhook/stripe
 
 # Trigger test event
 stripe trigger checkout.session.completed

@@ -205,7 +205,7 @@ curl https://tu-url.vercel.app/api/health
 
 | Variable | Requerida | Valor Producción | Valor Desarrollo |
 |----------|-----------|------------------|------------------|
-| `NEXT_PUBLIC_API_URL` | ✅ Sí | `https://linkedin-lead-checker-api.onrender.com` | `http://127.0.0.1:8000` |
+| `NEXT_PUBLIC_API_URL` | ✅ Sí | `https://linkedin-lead-checker-api.onrender.com` | `NEXT_PUBLIC_API_URL` |
 | `NEXT_PUBLIC_CHECKOUT_RETURN_URL` | ❌ Opcional | Auto-generado desde `window.location.origin` | N/A |
 
 > 💡 **Nota**: Las variables que empiezan con `NEXT_PUBLIC_` son expuestas al navegador.

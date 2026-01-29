@@ -17,7 +17,7 @@
 
 3. **web/lib/api.js**
    - Agregado `API_URL` constant con detección SSR-safe
-   - Compatible con localhost y producción
+  - Compatible con NEXT_PUBLIC_SITE_URL
 
 ---
 
@@ -151,7 +151,7 @@ const getPrimaryCTA = () => {
 ```env
 # No required - auto-detected
 # Production: https://linkedin-lead-checker-api.onrender.com
-# Localhost: http://127.0.0.1:8000
+# BACKEND_URL: BACKEND_URL
 ```
 
 ### Build Command:

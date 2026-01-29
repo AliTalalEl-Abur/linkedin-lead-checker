@@ -264,7 +264,7 @@ python test_subscription_activation.py
 python run.py
 
 # Terminal 2: Escuchar webhooks
-stripe listen --forward-to http://127.0.0.1:8000/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/billing/webhook/stripe
 
 # Terminal 3: Trigger evento
 stripe trigger checkout.session.completed
@@ -277,7 +277,7 @@ stripe trigger checkout.session.completed
 
 1. Iniciar servidor: `python run.py`
 2. Iniciar Next.js: `cd web && npm run dev`
-3. Navegar a `http://localhost:3000`
+3. Navegar a `NEXT_PUBLIC_SITE_URL`
 4. Click en "Get Pro" → Redirige a Stripe Checkout
 5. Completar pago (usar tarjeta de prueba: `4242 4242 4242 4242`)
 6. Redirige a `/billing-return.html`

@@ -5,6 +5,7 @@ import styles from '../styles/Onboarding.module.css';
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +57,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     const token = getStoredToken();
     if (!token) {
-      router.push('/login');
+      window.location.href = `${siteUrl}/login`;
     } else {
       setLoading(false);
     }
@@ -121,13 +122,13 @@ export default function OnboardingPage() {
 
       // Redirect to dashboard after 2 seconds
       setTimeout(() => {
-        router.push('/dashboard');
+        window.location.href = `${siteUrl}/dashboard`;
       }, 2000);
     } catch (err) {
       console.error('Save error:', err);
       if (err.message.includes('Session expired')) {
         clearToken();
-        router.push('/login');
+        window.location.href = `${siteUrl}/login`;
       } else {
         setError(err.message || 'Failed to save ICP configuration');
       }
@@ -137,7 +138,7 @@ export default function OnboardingPage() {
 
   const handleLogout = () => {
     clearToken();
-    router.push('/login');
+    window.location.href = `${siteUrl}/login`;
   };
 
   if (loading) {

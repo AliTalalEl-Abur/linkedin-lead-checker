@@ -8,7 +8,7 @@
 3. Copy **Secret key** (starts with `sk_test_`)
 4. Go to **Webhooks**
 5. Click **Add endpoint**
-   - URL: `http://localhost:8000/api/billing/webhook/stripe`
+   - URL: `BACKEND_URL/api/billing/webhook/stripe`
    - Events: Select `checkout.session.completed` and `customer.subscription.deleted`
 6. Copy **Signing secret** (starts with `whsec_`)
 7. In **Products**, create a new product:
@@ -33,7 +33,7 @@ pip install -r requirements.txt
 ```bash
 uvicorn app.main:app --reload --port 8000
 ```
-Visit: http://127.0.0.1:8000/docs
+Visit: BACKEND_URL/docs
 
 ### Step 5: Start Frontend (1 minute)
 ```bash
@@ -41,12 +41,12 @@ cd web
 npm install
 npm run dev
 ```
-Visit: http://localhost:3000
+Visit: NEXT_PUBLIC_SITE_URL
 
 ### Step 6: Test the Flow (30 seconds)
-1. Go to http://localhost:3000/login
+1. Go to NEXT_PUBLIC_SITE_URL/login
 2. Enter any email (e.g., test@example.com)
-3. Go to http://localhost:3000/dashboard
+3. Go to NEXT_PUBLIC_SITE_URL/dashboard
 4. Click **"🚀 Upgrade to Pro"**
 5. Click **"Upgrade Now"**
 6. Use Stripe test card: **4242 4242 4242 4242**
@@ -82,19 +82,19 @@ Expected output:
 
 ### Check Backend Status
 ```bash
-curl http://127.0.0.1:8000/health
+curl BACKEND_URL/health
 ```
 
 ### Check API Docs
 ```
-http://127.0.0.1:8000/docs
+BACKEND_URL/docs
 ```
 
 ### Test Webhook Locally (Advanced)
 ```bash
 # Install Stripe CLI: https://stripe.com/docs/stripe-cli
 stripe login
-stripe listen --forward-to localhost:8000/api/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/api/billing/webhook/stripe
 
 # In another terminal:
 stripe trigger checkout.session.completed

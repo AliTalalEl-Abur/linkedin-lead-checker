@@ -226,7 +226,7 @@ Si necesitas ayuda:
 
 3. **Validar locally**
    - `python app/main.py` (dev)
-   - `curl http://localhost:8000/health` (health check)
+   - `curl BACKEND_URL/health` (health check)
    - Crear usuario en `/api/auth/signup` (database test)
 
 ---

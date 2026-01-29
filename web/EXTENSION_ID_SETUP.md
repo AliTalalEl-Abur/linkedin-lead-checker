@@ -84,7 +84,7 @@ npm run dev
 
 # Navegador:
 # 1. Cargar extensión en chrome://extensions/
-# 2. Abrir http://localhost:3000/billing/success?session_id=test
+# 2. Abrir NEXT_PUBLIC_SITE_URL/billing/success?session_id=test
 # 3. Verificar que detecta la extensión
 ```
 
@@ -120,7 +120,7 @@ npm run dev
 ## 📝 Actualizar Manifest de Extensión
 
 El `manifest.json` ya está configurado para permitir comunicación desde:
-- `http://localhost:3000/*` (desarrollo)
+- `NEXT_PUBLIC_SITE_URL/*`
 - `https://linkedin-lead-checker.vercel.app/*` (producción)
 - `https://*.vercel.app/*` (preview deployments)
 
@@ -130,7 +130,7 @@ Si cambias el dominio de producción, actualiza:
 // extension/manifest.json
 "externally_connectable": {
   "matches": [
-    "http://localhost:3000/*",
+    "NEXT_PUBLIC_SITE_URL/*",
     "https://tu-dominio.com/*"
   ]
 }

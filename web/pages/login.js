@@ -5,6 +5,7 @@ import styles from '../styles/Auth.module.css';
 
 export default function LoginPage() {
   const router = useRouter();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -28,7 +29,7 @@ export default function LoginPage() {
     try {
       await login(email);
       // Redirect to onboarding after successful login
-      router.push('/onboarding');
+      window.location.href = `${siteUrl}/onboarding`;
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Login failed. Please try again.');

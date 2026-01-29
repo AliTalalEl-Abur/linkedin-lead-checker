@@ -103,7 +103,7 @@ npm run dev
 ```
 
 **Flujo de prueba:**
-1. Ir a http://localhost:3000
+1. Ir a NEXT_PUBLIC_SITE_URL
 2. Hacer clic en "Get Started" en cualquier plan
 3. Si no estás logueado → Te redirige a `/login`
 4. Después de login → Clic en botón de plan nuevamente
@@ -222,7 +222,7 @@ cd web && npm run dev
 ### 2. Testing con Stripe CLI (Opcional)
 ```bash
 # Terminal adicional para webhooks
-stripe listen --forward-to http://127.0.0.1:8001/billing/webhook/stripe
+stripe listen --forward-to BACKEND_URL/billing/webhook/stripe
 ```
 
 ### 3. Deploy a Producción

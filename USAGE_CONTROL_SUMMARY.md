@@ -50,7 +50,7 @@
 python verify_usage.py
 
 # Ver documentación interactiva
-# Abrir http://localhost:8000/docs
+# Abrir BACKEND_URL/docs
 ```
 
 ### Resultados del Test:

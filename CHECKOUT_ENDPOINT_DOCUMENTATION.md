@@ -205,11 +205,11 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### Example 1: Successful Checkout (Starter Plan)
 ```bash
-curl -X POST http://127.0.0.1:8000/billing/checkout \
+curl -X POST BACKEND_URL/billing/checkout \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "return_url": "http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}",
+    "return_url": "NEXT_PUBLIC_SITE_URL/checkout-result?session_id={CHECKOUT_SESSION_ID}",
     "plan": "starter"
   }'
 ```
@@ -224,11 +224,11 @@ curl -X POST http://127.0.0.1:8000/billing/checkout \
 
 ### Example 2: Invalid Plan (Should Fail)
 ```bash
-curl -X POST http://127.0.0.1:8000/billing/checkout \
+curl -X POST BACKEND_URL/billing/checkout \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "return_url": "http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}",
+    "return_url": "NEXT_PUBLIC_SITE_URL/checkout-result?session_id={CHECKOUT_SESSION_ID}",
     "plan": "premium"
   }'
 ```
@@ -242,10 +242,10 @@ curl -X POST http://127.0.0.1:8000/billing/checkout \
 
 ### Example 3: No Authentication (Should Fail)
 ```bash
-curl -X POST http://127.0.0.1:8000/billing/checkout \
+curl -X POST BACKEND_URL/billing/checkout \
   -H "Content-Type: application/json" \
   -d '{
-    "return_url": "http://localhost:3000/checkout-result?session_id={CHECKOUT_SESSION_ID}",
+    "return_url": "NEXT_PUBLIC_SITE_URL/checkout-result?session_id={CHECKOUT_SESSION_ID}",
     "plan": "pro"
   }'
 ```

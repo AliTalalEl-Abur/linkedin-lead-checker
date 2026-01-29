@@ -92,7 +92,7 @@ npm run dev
 ```
 
 ### Step 3: Open Browser
-Navigate to [http://localhost:3000](http://localhost:3000)
+Navigate to NEXT_PUBLIC_SITE_URL
 
 ### Alternative: Use Setup Script (Windows)
 ```powershell

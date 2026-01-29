@@ -322,11 +322,11 @@ app.include_router(verification_router)
 # Example curl commands:
 """
 # Full verification
-curl http://localhost:8000/admin/verify-stripe
+curl BACKEND_URL/admin/verify-stripe
 
 # Quick health check
-curl http://localhost:8000/admin/stripe-health
+curl BACKEND_URL/admin/stripe-health
 
 # With authentication (example)
-curl -H "Authorization: Bearer YOUR_TOKEN" http://localhost:8000/admin/verify-stripe
+curl -H "Authorization: Bearer YOUR_TOKEN" BACKEND_URL/admin/verify-stripe
 """

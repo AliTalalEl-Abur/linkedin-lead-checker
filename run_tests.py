@@ -26,7 +26,7 @@ print("   ✓ Procesos limpiados")
 print("\n2. Iniciando servidor backend...")
 server_process = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "app.main:application", 
-     "--host", "127.0.0.1", "--port", "8001"],
+     "--host", "0.0.0.0", "--port", "8001"],
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL
 )

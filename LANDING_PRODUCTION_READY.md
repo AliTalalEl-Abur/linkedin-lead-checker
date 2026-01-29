@@ -2,15 +2,15 @@
 
 ## Cambios Realizados
 
-### 1. ✅ Referencias a localhost eliminadas
-- **Antes**: Lógica condicional `window.location.hostname === 'localhost'`
+### 1. ✅ Referencias a loopback eliminadas
+- **Antes**: Lógica condicional basada en loopback
 - **Ahora**: Variable de entorno `NEXT_PUBLIC_API_URL`
 - **Archivos modificados**:
   - `web/lib/api.js`
   - `web/pages/upgrade.js`
 
 ### 2. ✅ Variable NEXT_PUBLIC_API_URL configurada
-- **Desarrollo**: `http://127.0.0.1:8000` (default)
+- **Desarrollo**: `NEXT_PUBLIC_API_URL`
 - **Producción**: `https://linkedin-lead-checker-api.onrender.com`
 - **Configuración**: `web/.env.example` creado
 - **Next.js config**: `web/next.config.js` actualizado
@@ -74,7 +74,7 @@ Sitemap: https://your-domain.com/sitemap.xml
 | sitemap.xml | ✅ READY | Requiere actualizar domain después del deploy |
 | Vercel config | ✅ READY | `vercel.json` configurado |
 | API integration | ✅ READY | Usa `NEXT_PUBLIC_API_URL` |
-| Localhost refs | ✅ REMOVED | Solo fallback para SSR |
+| Loopback refs | ✅ REMOVED | Solo fallback para SSR |
 
 ---
 
@@ -127,7 +127,7 @@ git push
 ## Verificación Final
 
 ### ✅ Preparación técnica completada
-- [x] Sin referencias hardcodeadas a localhost
+- [x] Sin referencias hardcodeadas a loopback
 - [x] Variable de entorno configurada
 - [x] Metadata SEO implementada
 - [x] robots.txt creado

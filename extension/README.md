@@ -80,7 +80,7 @@ See [EXTRACTOR_NOTES.md](EXTRACTOR_NOTES.md) for detailed extraction strategy.
 
 ## Configuration
 
-The extension calls the API at `http://127.0.0.1:8000` by default.
+The extension calls the API at `BACKEND_URL` by default.
 To change, edit the `API_CONFIG` in:
 - `src/background.js`
 - `popup.js`

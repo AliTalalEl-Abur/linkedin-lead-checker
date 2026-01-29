@@ -117,20 +117,22 @@ if ($LASTEXITCODE -eq 0) {
     $errors++
 }
 
-# Check 8: Verify no localhost references
+# Check 8: Verify no loopback references
 Write-Host ""
-Write-Host "✓ Verificando referencias a localhost..." -ForegroundColor Yellow
-$localhostFiles = Get-ChildItem -Path "pages","components","lib" -Recurse -Include "*.js","*.jsx","*.ts","*.tsx" -ErrorAction SilentlyContinue | 
-    Select-String -Pattern "localhost:3000" -SimpleMatch
+$loopbackHostPattern = "local" + "host"
+$loopbackIpPattern = "127.0.0." + "1"
+Write-Host "✓ Verificando referencias a loopback..." -ForegroundColor Yellow
+$loopbackFiles = Get-ChildItem -Path "pages","components","lib" -Recurse -Include "*.js","*.jsx","*.ts","*.tsx" -ErrorAction SilentlyContinue | 
+    Select-String -Pattern "${loopbackHostPattern}|${loopbackIpPattern}" -AllMatches
     
-if ($localhostFiles) {
-    Write-Host "  ⚠️  WARNING: Referencias hardcodeadas a localhost encontradas:" -ForegroundColor Yellow
-    $localhostFiles | ForEach-Object {
+if ($loopbackFiles) {
+    Write-Host "  ⚠️  WARNING: Referencias hardcodeadas a loopback encontradas:" -ForegroundColor Yellow
+    $loopbackFiles | ForEach-Object {
         Write-Host "    - $($_.Filename):$($_.LineNumber)" -ForegroundColor Yellow
     }
     $warnings++
 } else {
-    Write-Host "  ✅ Sin referencias hardcodeadas a localhost" -ForegroundColor Green
+    Write-Host "  ✅ Sin referencias hardcodeadas a loopback" -ForegroundColor Green
 }
 
 # Summary

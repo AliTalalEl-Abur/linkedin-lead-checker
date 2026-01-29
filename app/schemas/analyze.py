@@ -1,6 +1,7 @@
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from pydantic import ConfigDict
 from app.schemas.ai_responses import DecisionResult, FitScoringResult
 
 
@@ -20,6 +21,25 @@ class AnalyzeProfileResponse(BaseModel):
 class AnalyzeLinkedInRequest(BaseModel):
     """Request payload for /analyze/linkedin endpoint."""
     profile_extract: dict
+
+
+class AnalyzeLinkedInWithModeRequest(BaseModel):
+    """Request payload for /analyze endpoint with explicit mode."""
+    model_config = ConfigDict(populate_by_name=True)
+
+    profile_url: str | None = Field(default=None, alias="profileUrl")
+    profile_extract: dict | None = Field(default=None, alias="profileExtract")
+    mode: Literal["preview", "ai"] = "ai"
+
+
+class AnalyzeStableResponse(BaseModel):
+    """Stable response payload for /analyze endpoint."""
+    mode: Literal["preview", "ai"]
+    score: float
+    stars: int
+    insights: list[str]
+    decision: bool
+    remaining: Optional[int] = None
 
 
 class AnalyzeLinkedInUI(BaseModel):

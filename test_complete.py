@@ -1,6 +1,7 @@
 """Complete server test with all endpoints."""
 import subprocess
 import time
+import os
 import requests
 import sys
 
@@ -8,7 +9,7 @@ import sys
 print("🚀 Starting LinkedIn Lead Checker backend...")
 server_process = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "app.main:application", 
-     "--host", "127.0.0.1", "--port", "8001"],
+     "--host", "0.0.0.0", "--port", "8001"],
     stdout=subprocess.PIPE,
     stderr=subprocess.STDOUT,
     text=True
@@ -21,7 +22,8 @@ time.sleep(4)
 try:
     # Test health endpoint
     print("\n✅ Testing /health endpoint...")
-    response = requests.get("http://127.0.0.1:8001/health", timeout=5)
+    base_url = os.getenv("BACKEND_URL", "")
+    response = requests.get(f"{base_url}/health", timeout=5)
     print(f"   Status: {response.status_code}")
     print(f"   Response: {response.json()}")
     
@@ -33,7 +35,7 @@ try:
         "password": "TestPass123!",
         "full_name": "Test User"
     }
-    response = requests.post("http://127.0.0.1:8001/auth/login", json=login_data, timeout=15)
+    response = requests.post(f"{base_url}/auth/login", json=login_data, timeout=15)
     print(f"   Status: {response.status_code}")
     if response.status_code == 200:
         data = response.json()
@@ -45,7 +47,7 @@ try:
         # Test getting usage stats with the new FREE user
         print("\n✅ Testing /user/me/usage endpoint (FREE plan)...")
         headers = {"Authorization": f"Bearer {token}"}
-        response = requests.get("http://127.0.0.1:8001/user/me/usage", headers=headers, timeout=5)
+        response = requests.get(f"{base_url}/user/me/usage", headers=headers, timeout=5)
         print(f"   Status: {response.status_code}")
         usage_data = response.json()
         print(f"   Usage data: {usage_data}")

@@ -1,6 +1,7 @@
 """
 Quick test - verifica que el servidor responde
 """
+import os
 import requests
 import time
 
@@ -9,7 +10,8 @@ time.sleep(2)
 
 # Test 1: Health check
 try:
-    response = requests.get("http://127.0.0.1:8000/health")
+    base_url = os.getenv("BACKEND_URL", "")
+    response = requests.get(f"{base_url}/health")
     print(f"✅ Health check: {response.status_code}")
     print(f"   {response.json()}")
 except Exception as e:
@@ -19,8 +21,8 @@ except Exception as e:
 # Test 2: Checkout sin auth (debe fallar con 401)
 try:
     response = requests.post(
-        "http://127.0.0.1:8000/billing/checkout",
-        json={"return_url": "http://localhost:3000/return", "plan": "pro"}
+        f"{base_url}/billing/checkout",
+        json={"return_url": f"{os.getenv('NEXT_PUBLIC_SITE_URL', '')}/return", "plan": "pro"}
     )
     if response.status_code == 401:
         print(f"✅ Checkout sin auth: 401 (correcto)")
