@@ -69,6 +69,7 @@ def create_app() -> FastAPI:
 
     # Initialize database tables
     Base.metadata.create_all(bind=get_engine())
+    _ensure_user_columns(get_engine())
     logger.info("Database tables initialized")
     
     # Log kill switch status
@@ -110,6 +111,33 @@ def _validate_required_env(settings: object) -> None:
         raise RuntimeError(f"Missing required environment variables: {', '.join(errors)}")
     
     logger.info("✓ Required environment variables validated")
+
+
+def _ensure_user_columns(engine) -> None:
+    """Ensure critical user columns exist (for legacy DBs without migrations)."""
+    try:
+        with engine.begin() as conn:
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status VARCHAR(50)"
+            )
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_analyses_count INTEGER NOT NULL DEFAULT 0"
+            )
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS monthly_analyses_reset_at TIMESTAMPTZ"
+            )
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS lifetime_analyses_count INTEGER NOT NULL DEFAULT 0"
+            )
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_analysis_at TIMESTAMPTZ"
+            )
+            conn.exec_driver_sql(
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS icp_config_json JSON"
+            )
+        logger.info("✓ User columns ensured")
+    except Exception as exc:
+        logger.warning("User column check failed: %s", exc)
 
 
 def _log_service_status(settings: object) -> None:
