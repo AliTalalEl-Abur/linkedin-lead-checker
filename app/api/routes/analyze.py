@@ -319,9 +319,9 @@ def _preview_linkedin_response(profile: dict, user: User, message: str, preview_
 @router.post("", response_model=AnalyzeStableResponse, summary="Analyze LinkedIn profile with mode")
 def analyze_linkedin_with_mode(
     request: AnalyzeLinkedInWithModeRequest,
+    http_request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    http_request: Request,
 ):
     """Analyze LinkedIn data with explicit mode: preview or ai."""
     request_id = getattr(getattr(http_request, "state", None), "request_id", "unknown")
