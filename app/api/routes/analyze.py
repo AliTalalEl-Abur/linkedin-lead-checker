@@ -321,7 +321,7 @@ def analyze_linkedin_with_mode(
     request: AnalyzeLinkedInWithModeRequest,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    http_request: Request | None = None,
+    http_request: Request,
 ):
     """Analyze LinkedIn data with explicit mode: preview or ai."""
     request_id = getattr(getattr(http_request, "state", None), "request_id", "unknown")
